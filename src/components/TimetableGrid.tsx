@@ -41,16 +41,6 @@ export function TimetableGrid() {
     const lecturerMap = new Map(state.lecturers.map(l => [l.id, l]));
     const roomMap = new Map(state.rooms.map(r => [r.id, r]));
 
-    // Build grid
-    type CellState = { gene: Gene; type: 'start' } | { gene: Gene; type: 'covered' } | null;
-    const grid: CellState[][] = [];
-    for (let s = 0; s < TIME_SLOTS.length; s++) {
-        grid[s] = [];
-        for (let d = 0; d < DAYS.length; d++) {
-            grid[s][d] = null;
-        }
-    }
-
     const conflictCells = new Set<string>();
     const occupiedSlots = new Map<string, string[]>();
 
@@ -58,13 +48,70 @@ export function TimetableGrid() {
         for (let s = 0; s < gene.duration; s++) {
             const slotIdx = gene.slotIndex + s;
             if (slotIdx >= TIME_SLOTS.length) continue;
-            const key = `${gene.dayIndex}-${slotIdx}`;
-            if (!occupiedSlots.has(key)) occupiedSlots.set(key, []);
-            occupiedSlots.get(key)!.push(gene.courseId);
-            if (occupiedSlots.get(key)!.length > 1) conflictCells.add(key);
-            if (s === 0) grid[slotIdx][gene.dayIndex] = { gene, type: 'start' };
-            else grid[slotIdx][gene.dayIndex] = { gene, type: 'covered' };
+            const occKey = `${slotIdx}-${gene.dayIndex}`;
+            if (!occupiedSlots.has(occKey)) occupiedSlots.set(occKey, []);
+            occupiedSlots.get(occKey)!.push(gene.courseId);
+            if (occupiedSlots.get(occKey)!.length > 1) conflictCells.add(occKey);
         }
+    }
+
+    type CellState = { type: 'empty' } | { type: 'covered' } | { type: 'start', gene: Gene, rowSpan: number };
+    const dayTracks: CellState[][][] = [];
+
+    for (let d = 0; d < DAYS.length; d++) {
+        const dayGenes = state.timetable.filter(g => g.dayIndex === d);
+
+        // Sort by start slot, then duration (desc), then courseId to preserve order
+        dayGenes.sort((a, b) => {
+            if (a.slotIndex !== b.slotIndex) return a.slotIndex - b.slotIndex;
+            if (b.duration !== a.duration) return b.duration - a.duration;
+            return a.courseId.localeCompare(b.courseId);
+        });
+
+        const tracks: CellState[][] = [];
+
+        for (const gene of dayGenes) {
+            let placed = false;
+            let actualDuration = gene.duration;
+            if (gene.slotIndex + actualDuration > TIME_SLOTS.length) {
+                actualDuration = TIME_SLOTS.length - gene.slotIndex;
+            }
+
+            // Find first track where these slots are free
+            for (let t = 0; t < tracks.length; t++) {
+                let free = true;
+                for (let i = 0; i < actualDuration; i++) {
+                    if (tracks[t][gene.slotIndex + i].type !== 'empty') {
+                        free = false;
+                        break;
+                    }
+                }
+                if (free) {
+                    tracks[t][gene.slotIndex] = { type: 'start', gene, rowSpan: actualDuration };
+                    for (let i = 1; i < actualDuration; i++) {
+                        tracks[t][gene.slotIndex + i] = { type: 'covered' };
+                    }
+                    placed = true;
+                    break;
+                }
+            }
+
+            if (!placed) {
+                // Create new track
+                const newTrack: CellState[] = Array(TIME_SLOTS.length).fill(null).map(() => ({ type: 'empty' }));
+                newTrack[gene.slotIndex] = { type: 'start', gene, rowSpan: actualDuration };
+                for (let i = 1; i < actualDuration; i++) {
+                    newTrack[gene.slotIndex + i] = { type: 'covered' };
+                }
+                tracks.push(newTrack);
+            }
+        }
+
+        if (tracks.length === 0) {
+            tracks.push(Array(TIME_SLOTS.length).fill(null).map(() => ({ type: 'empty' })));
+        }
+
+        dayTracks[d] = tracks;
     }
 
     const getSessionEndTime = (startSlot: number, duration: number) => {
@@ -107,13 +154,23 @@ export function TimetableGrid() {
 
             <div className="timetable-wrapper">
                 <table className="timetable-table">
+                    <colgroup>
+                        <col style={{ width: '40px' }} />
+                        <col className="period-col" />
+                        <col className="time-col" />
+                        {DAYS.map((_, d) =>
+                            dayTracks[d].map((_, t) => (
+                                <col key={`col-${d}-${t}`} />
+                            ))
+                        )}
+                    </colgroup>
                     <thead>
                         <tr>
                             <th className="corner-header session-col">Session</th>
                             <th className="corner-header period-col">Period</th>
                             <th className="corner-header time-col">Time</th>
                             {DAYS.map((day, i) => (
-                                <th key={i} className="day-header-cell">
+                                <th key={i} className="day-header-cell" colSpan={dayTracks[i].length}>
                                     <span className="day-full">{day}</span>
                                     <span className="day-short">{day.slice(0, 3)}</span>
                                 </th>
@@ -148,46 +205,48 @@ export function TimetableGrid() {
                                     </td>
 
                                     {DAYS.map((_, dayIdx) => {
-                                        const cellState = grid[slotIdx]?.[dayIdx];
-                                        const key = `${dayIdx}-${slotIdx}`;
-                                        const hasConflict = conflictCells.has(key);
+                                        return dayTracks[dayIdx].map((track, trackIdx) => {
+                                            const cellState = track[slotIdx];
+                                            const key = `${dayIdx}-${slotIdx}`;
+                                            const hasConflict = conflictCells.has(key);
 
-                                        if (cellState && cellState.type === 'covered') return null;
+                                            if (cellState.type === 'covered') return null;
 
-                                        if (cellState && cellState.type === 'start') {
-                                            const { gene } = cellState;
-                                            const course = courseMap.get(gene.courseId);
-                                            const lecturer = lecturerMap.get(gene.lecturerId);
-                                            const room = roomMap.get(gene.roomId);
-                                            const startTime = TIME_SLOTS[gene.slotIndex].startTime;
-                                            const endTime = getSessionEndTime(gene.slotIndex, gene.duration);
+                                            if (cellState.type === 'start') {
+                                                const { gene, rowSpan } = cellState as Extract<CellState, { type: 'start' }>;
+                                                const course = courseMap.get(gene.courseId);
+                                                const lecturer = lecturerMap.get(gene.lecturerId);
+                                                const room = roomMap.get(gene.roomId);
+                                                const startTime = TIME_SLOTS[gene.slotIndex].startTime;
+                                                const endTime = getSessionEndTime(gene.slotIndex, gene.duration);
+
+                                                return (
+                                                    <td
+                                                        key={`${dayIdx}-${trackIdx}`}
+                                                        className={`grid-td occupied ${hasConflict ? 'conflict' : ''}`}
+                                                        rowSpan={rowSpan}
+                                                    >
+                                                        <div
+                                                            className="cell-content spanning"
+                                                            style={{
+                                                                backgroundColor: lecturer?.color || '#1f5ca9',
+                                                                borderColor: lecturer?.color || '#1f5ca9',
+                                                            }}
+                                                            onClick={(e) => handleCardClick(gene, e)}
+                                                        >
+                                                            <span className="cell-name">{course?.name || ''}</span>
+                                                            <span className="cell-course">{course?.code || gene.courseId}</span>
+                                                            <span className="cell-time">{startTime} - {endTime}</span>
+                                                            <span className="cell-room">{room?.name || ''}</span>
+                                                        </div>
+                                                    </td>
+                                                );
+                                            }
 
                                             return (
-                                                <td
-                                                    key={dayIdx}
-                                                    className={`grid-td occupied ${hasConflict ? 'conflict' : ''}`}
-                                                    rowSpan={gene.duration}
-                                                >
-                                                    <div
-                                                        className="cell-content spanning"
-                                                        style={{
-                                                            backgroundColor: lecturer?.color || '#1f5ca9',
-                                                            borderColor: lecturer?.color || '#1f5ca9',
-                                                        }}
-                                                        onClick={(e) => handleCardClick(gene, e)}
-                                                    >
-                                                        <span className="cell-name">{course?.name || ''}</span>
-                                                        <span className="cell-course">{course?.code || gene.courseId}</span>
-                                                        <span className="cell-time">{startTime} - {endTime}</span>
-                                                        <span className="cell-room">{room?.name || ''}</span>
-                                                    </div>
-                                                </td>
+                                                <td key={`${dayIdx}-${trackIdx}`} className={`grid-td empty ${hasConflict ? 'conflict' : ''}`}></td>
                                             );
-                                        }
-
-                                        return (
-                                            <td key={dayIdx} className={`grid-td empty ${hasConflict ? 'conflict' : ''}`}></td>
-                                        );
+                                        });
                                     })}
                                 </tr>
                             );

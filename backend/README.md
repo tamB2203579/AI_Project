@@ -1,11 +1,10 @@
 # Fundamental of Artificial Intelligence  
 ## Genetic Algorithm for Lecturer Scheduling
 
-This guide explains how to set up the development environment for the **Genetic Algorithm Lecturer Scheduling** project using the `uv` Python package manager.
----
+This guide explains how to set up the development environment for the Genetic Algorithm Lecturer Scheduling project using the `uv` Python package manager.
 
 ## 1. Install UV package manager
-Open **PowerShell** and run the following command:
+Open PowerShell and run the following command:
 ```bash
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```

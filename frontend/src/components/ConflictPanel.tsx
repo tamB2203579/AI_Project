@@ -1,13 +1,38 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // Conflict Panel: displays residual constraint violations
 import { useAppState } from '../data/store';
-import { evaluateFitness } from '../ga/fitness';
+
+// fake fitness evaluation
+function evaluateFitness() {
+    return {
+        score: 1000,
+        penalties: {
+            lecturerClash: 0,
+            roomClash: 0,
+            capacityViolation: 0,
+            sessionOverflow: 0,
+            lecturerOverload: 0
+        }
+    };
+}
 
 export function ConflictPanel() {
     const { state } = useAppState();
 
-    if (!state.timetable || state.timetable.length === 0) return null;
+   if (!state.timetable || state.timetable.length === 0) return null;
 
-    const result = evaluateFitness(state.timetable, state.lecturers, state.courses, state.rooms);
+   //FAKE DATA
+    const result = {
+        score: 1000,
+        penalties: {
+            lecturerClash: 0,
+            roomClash: 0,
+            capacityViolation: 0,
+            sessionOverflow: 0,
+            lecturerOverload: 0
+        }
+    };
+
     const { penalties } = result;
     const hasIssues = Object.values(penalties).some(v => v > 0);
 

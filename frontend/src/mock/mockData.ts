@@ -1,0 +1,42 @@
+export const mockData = {
+  timeslots: [
+    { id: 1, day: 1, start_period: 1, duration: 3 },
+    { id: 2, day: 1, start_period: 4, duration: 2 },
+    { id: 3, day: 1, start_period: 7, duration: 3 },
+    { id: 4, day: 2, start_period: 1, duration: 4 },
+    { id: 5, day: 2, start_period: 6, duration: 4 },
+    { id: 6, day: 3, start_period: 1, duration: 3 },
+    { id: 7, day: 3, start_period: 4, duration: 2 },
+    { id: 8, day: 4, start_period: 1, duration: 5 },
+    { id: 9, day: 5, start_period: 1, duration: 4 },
+    { id: 10, day: 5, start_period: 6, duration: 4 }
+  ],
+
+  rooms: [
+    { id: 1, name: "A1-101", capacity: 50, type: "Lecture" },
+    { id: 2, name: "A1-102", capacity: 50, type: "Lecture" },
+    { id: 3, name: "B2-201", capacity: 100, type: "Lecture" },
+    { id: 4, name: "B2-202", capacity: 30, type: "Lab" },
+    { id: 5, name: "C3-301", capacity: 60, type: "Lecture" },
+    { id: 6, name: "C3-302", capacity: 35, type: "Lab" }
+  ],
+
+  lecturers: [
+    { id: 1, name: "TS. Nguyen Van A", maxUnitPerWeek: 15, preferenceDay: [1,2,3] },
+    { id: 2, name: "TS. Tran Thi B", maxUnitPerWeek: 12, preferenceDay: [3,4] },
+    { id: 3, name: "ThS. Le Van C", maxUnitPerWeek: 20, preferenceDay: [1,2,4,5] },
+    { id: 4, name: "PGS. Pham Thi D", maxUnitPerWeek: 10, preferenceDay: [5] },
+    { id: 5, name: "ThS. Hoang Van E", maxUnitPerWeek: 18, preferenceDay: [2,3,5] }
+  ],
+
+  courses: [
+    { id:1,name:"Toan Cao Cap",unitsPerWeek:8,studentsCount:60,roomType:["Lecture"],lecturerId:1,maxUnitsPerDay:4 },
+    { id:2,name:"Lap Trinh C++",unitsPerWeek:10,studentsCount:30,roomType:["Lab","Lecture"],lecturerId:2,maxUnitsPerDay:5 },
+    { id:3,name:"Tri Tue Nhan Tao",unitsPerWeek:8,studentsCount:80,roomType:["Lecture"],lecturerId:3,maxUnitsPerDay:4 },
+    { id:4,name:"Kien Truc May Tinh",unitsPerWeek:4,studentsCount:45,roomType:["Lecture","Lab"],lecturerId:4,maxUnitsPerDay:4 },
+    { id:5,name:"Mang May Tinh",unitsPerWeek:6,studentsCount:50,roomType:["Lecture","Lab"],lecturerId:5,maxUnitsPerDay:3 },
+    { id:6,name:"Do Hoa May Tinh",unitsPerWeek:4,studentsCount:35,roomType:["Lab"],lecturerId:2,maxUnitsPerDay:4 },
+    { id:7,name:"Vat Ly Dai Cuong",unitsPerWeek:6,studentsCount:90,roomType:["Lecture"],lecturerId:1,maxUnitsPerDay:3 },
+    { id:8,name:"Thuc Hanh AI",unitsPerWeek:4,studentsCount:30,roomType:["Lab"],lecturerId:3,maxUnitsPerDay:4 }
+  ]
+};

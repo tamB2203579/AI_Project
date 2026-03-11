@@ -3,7 +3,10 @@ import copy
 from app.schemas import Chromosome
 
 def single_point_crossover(parent1: Chromosome, parent2: Chromosome):
-    point = random.randint(1, len(parent1.genes) - 1)
+    length = len(parent1.genes)
+    if length <= 1:
+        return Chromosome(genes=copy.deepcopy(parent1.genes)), Chromosome(genes=copy.deepcopy(parent2.genes))
+    point = random.randint(1, length - 1)
     child1_genes = copy.deepcopy(parent1.genes[:point]) + copy.deepcopy(parent2.genes[point:])
     child2_genes = copy.deepcopy(parent2.genes[:point]) + copy.deepcopy(parent1.genes[point:])
     return Chromosome(genes=child1_genes), Chromosome(genes=child2_genes)

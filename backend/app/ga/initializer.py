@@ -1,5 +1,6 @@
 from app.ga.random_init import generate_random_chromosome
 from app.ga.semi_greedy_init import generate_semi_greedy_chromosome
+from app.ga.greedy_init import generate_greedy_chromosome
 from app.schemas import Chromosome
 
 
@@ -19,7 +20,18 @@ def initialize_population(
 
     population = []
 
-    # random
+    # Greedy
+    for _ in range(greedy_size):
+
+        genes = generate_greedy_chromosome(
+            courses, lecturers, rooms, timeslots
+        )
+
+        population.append(
+            Chromosome(genes=genes)
+        )
+
+    # Random
     for _ in range(random_size):
 
         genes = generate_random_chromosome(
@@ -30,7 +42,7 @@ def initialize_population(
             Chromosome(genes=genes)
         )
 
-    # semi greedy
+    # Semi Greedy
     for _ in range(semi_size):
 
         genes = generate_semi_greedy_chromosome(

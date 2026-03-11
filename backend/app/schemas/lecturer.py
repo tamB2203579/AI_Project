@@ -1,8 +1,7 @@
-from dataclasses import dataclass
 from typing import List
+from pydantic import BaseModel
 
-@dataclass
-class Lecturer:
+class Lecturer(BaseModel):
     id: int
     name: str
     maxUnitPerWeek: int

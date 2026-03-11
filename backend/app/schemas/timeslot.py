@@ -1,7 +1,6 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
 
-@dataclass
-class TimeSlot:
+class TimeSlot(BaseModel):
     id: int
     day: int
     start_period: int

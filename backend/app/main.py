@@ -26,12 +26,17 @@ def test_initializer(data: dict):
     timeslots = [TimeSlot(**t) for t in data["timeslots"]]
 
     population = initialize_population(
-        pop_size=10,
+        pop_size=3,
         courses=courses,
         lecturers=lecturers,
         rooms=rooms,
         timeslots=timeslots
     )
+
+    lecturer_map = {l.id: l.name for l in lecturers}
+    room_map = {r.id: r.name for r in rooms}
+    course_map = {c.id: c.name for c in courses}
+    timeslot_map = {t.id: t for t in timeslots}
 
     result = []
 
@@ -40,11 +45,18 @@ def test_initializer(data: dict):
         genes = []
 
         for g in chromosome.genes:
+
+            slot = timeslot_map[g.timeslot_id]
+
             genes.append({
-                "course": g.course_id,
-                "lecturer": g.lecturer_id,
-                "room": g.room_id,
-                "timeslot": g.timeslot_id
+                "session": g.session_id,
+                "course": course_map[g.course_id],
+                "units": g.units,
+                "lecturer": lecturer_map[g.lecturer_id],
+                "room": room_map[g.room_id],
+                "day": slot.day,
+                "start_period": slot.start_period,
+                "duration": slot.duration
             })
 
         result.append(genes)

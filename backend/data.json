@@ -164,7 +164,7 @@
     {
       "id": 2,
       "name": "Lap Trinh C++",
-      "unitsPerWeek": 10,
+      "unitsPerWeek": 9,
       "studentsCount": 30,
       "roomType": [
         "Lab",

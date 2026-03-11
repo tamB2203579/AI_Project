@@ -1,8 +1,7 @@
-from dataclasses import dataclass
 from typing import List
+from pydantic import BaseModel
 
-@dataclass
-class Course:
+class Course(BaseModel):
     id: int
     name: str
     unitsPerWeek: int

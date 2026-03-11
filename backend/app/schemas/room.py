@@ -1,7 +1,6 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
 
-@dataclass
-class Room:
+class Room(BaseModel):
     id: int
     name: str
     capacity: int

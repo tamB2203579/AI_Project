@@ -1,6 +1,6 @@
 import random
 from app.schemas import Chromosome, Gene
-from app.ga.session_utils import expand_courses_to_sessions
+from app.utils import expand_courses_to_sessions
 
 TOP_K = 3
 

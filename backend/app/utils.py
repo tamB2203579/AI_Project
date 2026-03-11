@@ -17,3 +17,17 @@ def expand_courses_to_sessions(courses):
             session_id += 1
 
     return sessions
+
+
+def format_genes(chromosome):
+    return [
+        {
+            "session": g.session_id,
+            "course": g.course_id,
+            "units": g.units,
+            "lecturer": g.lecturer_id,
+            "room": g.room_id,
+            "timeslot": g.timeslot_id
+        }
+        for g in chromosome.genes
+    ]

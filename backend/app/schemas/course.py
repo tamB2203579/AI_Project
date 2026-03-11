@@ -1,4 +1,3 @@
-from typing import List
 from pydantic import BaseModel
 
 class Course(BaseModel):
@@ -6,6 +5,6 @@ class Course(BaseModel):
     name: str
     unitsPerWeek: int
     studentsCount: int
-    roomType: List[str]
+    roomType: list[str]
     lecturerId: int
     maxUnitsPerDay: int

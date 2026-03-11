@@ -1,4 +1,3 @@
-from typing import List
 from pydantic import BaseModel
 
 from .course import Course
@@ -7,7 +6,7 @@ from .room import Room
 from .timeslot import TimeSlot
 
 class ScheduleRequest(BaseModel):
-    lecturers: List[Lecturer]
-    rooms: List[Room]
-    courses: List[Course]
-    timeslots: List[TimeSlot]
+    lecturers: list[Lecturer]
+    rooms: list[Room]
+    courses: list[Course]
+    timeslots: list[TimeSlot]

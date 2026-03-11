@@ -62,10 +62,7 @@ def initialize_population(
     return population
 
 
-# ===============================
 # RANDOM INIT
-# ===============================
-
 def generate_random_chromosome(sessions, lecturers, rooms, timeslots):
 
     genes = []
@@ -100,10 +97,7 @@ def generate_random_chromosome(sessions, lecturers, rooms, timeslots):
     return genes
 
 
-# ===============================
 # GREEDY INIT
-# ===============================
-
 def generate_greedy_chromosome(sessions, lecturers, rooms, timeslots):
 
     genes = []
@@ -146,10 +140,7 @@ def generate_greedy_chromosome(sessions, lecturers, rooms, timeslots):
     return genes
 
 
-# ===============================
 # SEMI GREEDY INIT
-# ===============================
-
 def generate_semi_greedy_chromosome(sessions, lecturers, rooms, timeslots):
 
     genes = []
@@ -195,10 +186,7 @@ def generate_semi_greedy_chromosome(sessions, lecturers, rooms, timeslots):
     return genes
 
 
-# ===============================
 # SCORING FUNCTION
-# ===============================
-
 def evaluate_option(course, lecturer, room, slot):
 
     score = 0
@@ -215,10 +203,7 @@ def evaluate_option(course, lecturer, room, slot):
     return score
 
 
-# ===============================
 # SORT COURSE
-# ===============================
-
 def sort_courses(courses):
 
     return sorted(

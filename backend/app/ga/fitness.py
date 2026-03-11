@@ -137,7 +137,9 @@ def evaluate_soft_constraints(
         # Kiểm tra Sở thích: Nếu ngày học nằm trong bộ preferenceDay đã khai báo của Giáo viên.
         if timeslot.day in lecturer.preferenceDay:
             scores["preference_score"] += 1
-            details.append(f"Sở thích thời gian: {lecturer.id} vào ngày {timeslot.day}")
+            details.append(
+                f"[Preference] Giảng viên {lecturer.id} được xếp đúng ngày mong muốn (Ngày {timeslot.day})"
+            )
 
         lecturer_key = (lecturer.id, timeslot.day)
         if lecturer_key not in lecturer_schedule:
@@ -163,8 +165,14 @@ def evaluate_soft_constraints(
         # Tiêu chí Workload: Quá tải hay không? (Limit cứng là 8 tiết/ngày)
         if total_periods <= 8:
             scores["workload_score"] += 1
+            details.append(
+                f"[Workload] Giảng viên {lecturer_id} có khối lượng giảng dạy hợp lý ({total_periods} tiết) vào ngày {day}"
+            )
         else:
             scores["workload_score"] -= 1  # Trừ điểm nếu quá tải
+            details.append(
+                f"[Workload] Giảng viên {lecturer_id} bị quá tải ({total_periods} tiết) vào ngày {day}"
+            )
 
         consecutive_periods = 0
         last_end = -1
@@ -188,15 +196,24 @@ def evaluate_soft_constraints(
                 # Cùng dạy liên tiếp và Cùng cả 1 phòng học => Thưởng thêm điểm Movement.
                 if last_room == room_id:
                     scores["movement_score"] += 1
+                    details.append(
+                        f"[Movement] Giảng viên {lecturer_id} dạy liên tiếp cùng một phòng (Phòng {room_id})"
+                    )
 
             elif gap == 1:
                 # Gap == 1 (Nghỉ đúng 1 tiết): Hợp lý, cho phép GV nghỉ giải lao ngắn.
                 scores["idle_time_score"] += 1
+                details.append(
+                    f"[Idle] Giảng viên {lecturer_id} có khoảng nghỉ 1 tiết hợp lý vào ngày {day}"
+                )
                 consecutive_periods = end - start + 1
 
             else:
                 # Gap >= 2: Tiết rỗng quá lắt nhắt khiến lịch của GV bị kéo dãn và tốn thời gian trống. Phạt trừ.
                 scores["idle_time_score"] -= 1
+                details.append(
+                    f"[Idle] Giảng viên {lecturer_id} có khoảng trống dài {gap} tiết giữa hai ca vào ngày {day}"
+                )
                 consecutive_periods = end - start + 1
 
             last_end = end
@@ -206,10 +223,48 @@ def evaluate_soft_constraints(
             # Dạy quá 5 tiết liên tục sẽ bị tính phạt trừ điểm workload.
             if consecutive_periods > 5:
                 scores["workload_score"] -= 1
+                details.append(
+                    f"[Workload] Giảng viên {lecturer_id} dạy liên tục quá 5 tiết"
+                )
                 consecutive_periods = 0
 
     return scores, details
 
+def analyze_solution(
+    chromosome: Chromosome,
+    courses_dict,
+    lecturers_dict,
+    rooms_dict,
+    timeslots_dict,
+):
+    hard_counts, hard_details = evaluate_hard_constraints(
+        chromosome,
+        courses_dict,
+        lecturers_dict,
+        rooms_dict,
+        timeslots_dict,
+    )
+
+    soft_scores, soft_details = evaluate_soft_constraints(
+        chromosome,
+        courses_dict,
+        lecturers_dict,
+        rooms_dict,
+        timeslots_dict,
+    )
+
+    return {
+        "hard_constraints": {
+            "total_violations": sum(hard_counts.values()),
+            "by_type": hard_counts,
+            "details": hard_details,
+        },
+        "soft_constraints": {
+            "total_score": sum(soft_scores.values()),
+            "by_type": soft_scores,
+            "details": soft_details,
+        },
+    }
 
 def penalty_fitness(
     chromosome: Chromosome,

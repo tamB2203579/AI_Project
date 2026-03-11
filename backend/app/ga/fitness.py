@@ -217,6 +217,9 @@ def penalty_fitness(
     lecturers_dict: dict[int, Lecturer],
     rooms_dict: dict[int, Room],
     timeslots_dict: dict[int, TimeSlot],
+    base_score: int = 1000,
+    hard_penalty: int = 50,
+    soft_bonus: int = 5,
 ):
     """
     Penalty Fitness (Chấm điểm Trừ Phạt Base Score)
@@ -226,7 +229,6 @@ def penalty_fitness(
     - Mỗi vi phạm nghiêm trọng (Hard Constraint) làm trừ đi 50 điểm.
     - Mỗi một nấc đánh giá đạt của Soft Constraint sẽ cộng thêm 5 điểm bù.
     """
-    base_score = 1000
     hard_counts, _ = evaluate_hard_constraints(
         chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
     )
@@ -237,11 +239,11 @@ def penalty_fitness(
     hard_violations = sum(hard_counts.values())
     soft_score = sum(soft_scores.values())
 
-    # 1 Lỗi Cứng = Mất 50 điểm
-    penalty = hard_violations * 50
+    # 1 lỗi cứng = mất x điểm
+    penalty = hard_violations * hard_penalty
 
     # Cộng dồn điểm mềm * tỷ lệ thưởng
-    bonus = soft_score * 5
+    bonus = soft_score * soft_bonus
 
     chromosome.fitness = base_score - penalty + bonus
     return chromosome.fitness
@@ -253,13 +255,15 @@ def alpha_beta_fitness(
     lecturers_dict: dict[int, Lecturer],
     rooms_dict: dict[int, Room],
     timeslots_dict: dict[int, TimeSlot],
+    alpha: int = 1000,
+    beta: int = 10,
 ):
     """
     Điểm Thích Nghi Alpha/Beta (Thưởng Phát Không Tuệ Tính)
 
     Sử dụng tỷ lệ nghịch và trọng số khác biệt cho 2 nhóm Soft và Hard:
     - Alpha=1000: Scale tối đa nếu NST không dính bất kỳ lỗi HARD nào (Score_Hard = Alpha * 1.0).
-    - Beta=100: Tỷ suất điểm mềm. Tối đa của cá thể cộng sinh thêm từ ưu điểm thời khóa biểu.
+    - Beta=10: Tỷ suất điểm mềm. Tối đa của cá thể cộng sinh thêm từ ưu điểm thời khóa biểu.
     Công thức: Alpha * (1 / (1 + Sum(HardViols))) + Beta * Sum(Max(0, SoftScore))
     """
     hard_counts, _ = evaluate_hard_constraints(
@@ -268,9 +272,6 @@ def alpha_beta_fitness(
     soft_scores, _ = evaluate_soft_constraints(
         chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
     )
-
-    alpha = 1000
-    beta = 100
 
     hard_violations = sum(hard_counts.values())
     soft_score = sum(soft_scores.values())
@@ -304,12 +305,12 @@ def weighted_fitness(
         chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
     )
 
-    # TRỌNG SỐ CHO HARD CONSTRAINTS (Tổng chia rổ: 0.70)
+    # TRỌNG SỐ CHO HARD CONSTRAINTS (Tổng: 0.70)
     w_overlap = 0.35  # 35% cho Trùng lịch (Nghiêm trọng nhất)
     w_time = 0.20  # 20% cho Sai khung giờ
     w_room = 0.15  # 15% cho Phòng sai tính chất/sức chứa
 
-    # TRỌNG SỐ CHO SOFT CONSTRAINTS (Tổng chia rổ: 0.30)
+    # TRỌNG SỐ CHO SOFT CONSTRAINTS (Tổng: 0.30)
     w_pref = 0.10  # 10% Sở thích ưu tiên
     w_workload = 0.08  # 8% Khối lượng làm việc liên tục
     w_idle = 0.07  # 7% Thời gian rảnh rỗi chờ ca dạy

@@ -1,9 +1,6 @@
 from app.schemas.chromosome import Chromosome
 
 def get_elites(population: list[Chromosome], elitism_rate: float = 0.1) -> list[Chromosome]:
-    """
-    Trích xuất các cá thể xuất sắc nhất (Elite) trực tiếp vào thế hệ tiếp theo.
-    """
     if not population:
         return []
         

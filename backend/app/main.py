@@ -2,21 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import json
 
-from app.schemas import Course, Room, Lecturer, TimeSlot
+from app.schemas import Course, Room, Lecturer, TimeSlot, ScheduleRequest
 
 from app.ga.initializer import initialize_population
-from app.ga.fitness import (
-    weighted_fitness,
-    penalty_fitness,
-    alpha_beta_fitness,
-    lexicographic_fitness,
-)
-from app.ga.selection import (
-    roulette_wheel_selection,
-    tournament_selection,
-    rank_selection,
-    elimination_selection,
-)
+from app.ga.fitness import pick_fitness_method, weighted_fitness
+from app.ga.selection import pick_selection_method
 from app.ga.elitism import get_elites
 
 app = FastAPI()
@@ -113,19 +103,16 @@ def test_selection():
     with open("data.json", "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # Khởi tạo dữ liệu
     lecturers = [Lecturer(**l) for l in data["lecturers"]]
     rooms = [Room(**r) for r in data["rooms"]]
     courses = [Course(**c) for c in data["courses"]]
     timeslots = [TimeSlot(**t) for t in data["timeslots"]]
 
-    # Tạo từ điển cho fitness
     courses_dict = {c.id: c for c in courses}
     lecturers_dict = {l.id: l for l in lecturers}
     rooms_dict = {r.id: r for r in rooms}
     timeslots_dict = {t.id: t for t in timeslots}
 
-    # Sinh quần thể 20 cá thể
     population = initialize_population(
         pop_size=20,
         courses=courses,
@@ -134,19 +121,16 @@ def test_selection():
         timeslots=timeslots,
     )
 
-    # Tính fitness (Dùng weighted_fitness làm chuẩn)
     for ind in population:
         weighted_fitness(ind, courses_dict, lecturers_dict, rooms_dict, timeslots_dict)
 
-    num_parents = 5  # Chọn ra 5 cá thể tốt nhất
+    num_parents = 5
 
-    # Áp dụng các Selection methods
-    rw_selected = roulette_wheel_selection(population, num_parents)
-    tn_selected = tournament_selection(population, num_parents, k=3)
-    rank_selected = rank_selection(population, num_parents)
-    eli_selected = elimination_selection(population, num_parents)
+    rw_selected = pick_selection_method(population, num_parents, method="roulette")
+    tn_selected = pick_selection_method(population, num_parents, method="tournament", tournament_k=3)
+    rank_selected = pick_selection_method(population, num_parents, method="rank")
+    eli_selected = pick_selection_method(population, num_parents, method="elimination")
 
-    # Helper function để trích xuất list fitness từ danh sách cá thể
     def extract_fitness(selected_pop):
         return [ind.fitness for ind in selected_pop]
 
@@ -174,7 +158,6 @@ def test_fitness():
     rooms_dict = {r.id: r for r in rooms}
     timeslots_dict = {t.id: t for t in timeslots}
 
-    # Generate 1 individual to test all 4 fitness functions
     population = initialize_population(
         pop_size=1,
         courses=courses,
@@ -185,18 +168,27 @@ def test_fitness():
 
     chromosome = population[0]
 
+    # Sử dụng pick_fitness_method cho từng phương pháp
     return {
-        "penalty_fitness": penalty_fitness(
-            chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
+        "penalty_fitness": pick_fitness_method(
+            chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict,
+            method="penalty",
+            hard_penalty=100,
+            soft_bonus=5
         ),
-        "alpha_beta_fitness": alpha_beta_fitness(
-            chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
+        "alpha_beta_fitness": pick_fitness_method(
+            chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict,
+            method="alpha_beta",
+            alpha=1000,
+            beta=100
         ),
-        "weighted_fitness": weighted_fitness(
-            chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
+        "weighted_fitness": pick_fitness_method(
+            chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict,
+            method="weighted",
         ),
-        "lexicographic_fitness": lexicographic_fitness(
-            chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
+        "lexicographic_fitness": pick_fitness_method(
+            chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict,
+            method="lexicographic",
         ),
     }
 

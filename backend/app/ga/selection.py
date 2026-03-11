@@ -70,3 +70,24 @@ def elimination_selection(
     # Sắp xếp giảm dần theo fitness và lấy các cá thể tốt nhất
     sorted_population = sorted(population, key=lambda ind: ind.fitness, reverse=True)
     return sorted_population[:num_parents]
+
+
+SELECTION_METHODS = {
+    "roulette": roulette_wheel_selection,
+    "tournament": tournament_selection,
+    "rank": rank_selection,
+    "elimination": elimination_selection,
+}
+
+
+def pick_selection_method(
+    population: list[Chromosome],
+    num_parents: int,
+    method: str = "roulette",
+    tournament_k: int = 3,
+) -> list[Chromosome]:
+    if method == "tournament":
+        return tournament_selection(population, num_parents, k=tournament_k)
+
+    select_fn = SELECTION_METHODS.get(method, rank_selection)
+    return select_fn(population, num_parents)

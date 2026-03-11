@@ -378,3 +378,24 @@ def lexicographic_fitness(
     # Điểm càng ít lỗi âm (Vd: -1 so với -30) thì bộ gene cá thể đó ưu việt hơn.
     chromosome.fitness = (-hard_violations, soft_score)
     return chromosome.fitness
+
+
+FITNESS_METHODS = {
+    "weighted": weighted_fitness,
+    "penalty": penalty_fitness,
+    "alpha_beta": alpha_beta_fitness,
+    "lexicographic": lexicographic_fitness,
+}
+
+
+def pick_fitness_method(
+    chromosome: Chromosome,
+    courses_dict: dict[int, Course],
+    lecturers_dict: dict[int, Lecturer],
+    rooms_dict: dict[int, Room],
+    timeslots_dict: dict[int, TimeSlot],
+    method: str = "weighted",
+    **kwargs,
+):
+    fitness_fn = FITNESS_METHODS.get(method, weighted_fitness)
+    return fitness_fn(chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict, **kwargs)

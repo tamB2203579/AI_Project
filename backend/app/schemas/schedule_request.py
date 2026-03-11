@@ -5,6 +5,7 @@ from .lecturer import Lecturer
 from .room import Room
 from .timeslot import TimeSlot
 
+
 class ScheduleRequest(BaseModel):
     lecturers: list[Lecturer]
     rooms: list[Room]

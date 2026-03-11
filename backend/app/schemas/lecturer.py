@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class Lecturer(BaseModel):
     id: int
     name: str

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class TimeSlot(BaseModel):
     id: int
     day: int

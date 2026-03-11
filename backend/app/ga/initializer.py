@@ -34,28 +34,19 @@ def initialize_population(
 
     # Greedy
     for _ in range(greedy_size):
-
-        genes = generate_greedy_chromosome(
-            sessions, lecturers, rooms, timeslots
-        )
+        genes = generate_greedy_chromosome(sessions, lecturers, rooms, timeslots)
 
         population.append(Chromosome(genes=genes))
 
     # Random
     for _ in range(random_size):
-
-        genes = generate_random_chromosome(
-            sessions, lecturers, rooms, timeslots
-        )
+        genes = generate_random_chromosome(sessions, lecturers, rooms, timeslots)
 
         population.append(Chromosome(genes=genes))
 
     # Semi Greedy
     for _ in range(semi_size):
-
-        genes = generate_semi_greedy_chromosome(
-            sessions, lecturers, rooms, timeslots
-        )
+        genes = generate_semi_greedy_chromosome(sessions, lecturers, rooms, timeslots)
 
         population.append(Chromosome(genes=genes))
 
@@ -68,19 +59,18 @@ def generate_random_chromosome(sessions, lecturers, rooms, timeslots):
     genes = []
 
     for session in sessions:
-
         course = session["course"]
         units = session["units"]
         session_id = session["session_id"]
 
         lecturer = random.choice(lecturers)
         room = random.choice(rooms)
-        
+
         valid_slots = [s for s in timeslots if s.duration >= units]
 
         if not valid_slots:
             continue
-        
+
         slot = random.choice(valid_slots)
 
         gene = Gene(
@@ -89,7 +79,7 @@ def generate_random_chromosome(sessions, lecturers, rooms, timeslots):
             course_id=course.id,
             timeslot_id=slot.id,
             units=units,
-            session_id=session_id
+            session_id=session_id,
         )
 
         genes.append(gene)
@@ -103,7 +93,6 @@ def generate_greedy_chromosome(sessions, lecturers, rooms, timeslots):
     genes = []
 
     for session in sessions:
-
         course = session["course"]
         units = session["units"]
         session_id = session["session_id"]
@@ -114,7 +103,6 @@ def generate_greedy_chromosome(sessions, lecturers, rooms, timeslots):
         for lecturer in lecturers:
             for room in rooms:
                 for slot in timeslots:
-
                     if slot.duration < units:
                         continue
 
@@ -132,7 +120,7 @@ def generate_greedy_chromosome(sessions, lecturers, rooms, timeslots):
             course_id=course.id,
             timeslot_id=slot.id,
             units=units,
-            session_id=session_id
+            session_id=session_id,
         )
 
         genes.append(gene)
@@ -146,7 +134,6 @@ def generate_semi_greedy_chromosome(sessions, lecturers, rooms, timeslots):
     genes = []
 
     for session in sessions:
-
         course = session["course"]
         units = session["units"]
         session_id = session["session_id"]
@@ -156,7 +143,6 @@ def generate_semi_greedy_chromosome(sessions, lecturers, rooms, timeslots):
         for lecturer in lecturers:
             for room in rooms:
                 for slot in timeslots:
-
                     if slot.duration < units:
                         continue
 
@@ -178,7 +164,7 @@ def generate_semi_greedy_chromosome(sessions, lecturers, rooms, timeslots):
             course_id=course.id,
             timeslot_id=slot.id,
             units=units,
-            session_id=session_id
+            session_id=session_id,
         )
 
         genes.append(gene)
@@ -208,10 +194,6 @@ def sort_courses(courses):
 
     return sorted(
         courses,
-        key=lambda c: (
-            c.studentsCount,
-            c.unitsPerWeek,
-            len(c.roomType)
-        ),
-        reverse=True
+        key=lambda c: (c.studentsCount, c.unitsPerWeek, len(c.roomType)),
+        reverse=True,
     )

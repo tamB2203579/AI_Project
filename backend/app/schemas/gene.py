@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class Gene(BaseModel):
     lecturer_id: int
     room_id: int

@@ -2,7 +2,7 @@
 // Timetable Grid with click-to-show detail popup
 import { useState } from "react";
 import { useAppState } from "../data/store";
-import { DAYS, TIME_SLOTS } from "../data/types";
+import { DAYS, TIME_SLOTS, PERIODS_PER_DAY, PERIOD_TIME } from "../data/types";
 import { ConflictPanel } from "./ConflictPanel";
 import type { Gene } from "../data/types";
 
@@ -20,6 +20,10 @@ interface PopupInfo {
 export function TimetableGrid() {
   const { state } = useAppState();
   const [popup, setPopup] = useState<PopupInfo | null>(null);
+
+  console.log("COURSES:", state.courses);
+  console.log("TIMETABLE:", state.timetable);
+  console.log("TIME Slot:", TIME_SLOTS);
 
   if (!state.timetable || state.timetable.length === 0) {
     return (
@@ -42,27 +46,40 @@ export function TimetableGrid() {
     );
   }
 
-  // Build lookup maps
+  function getGeneSlot(gene: Gene) {
+    const dayIndex = Math.floor((gene.timeslotId - 1) / PERIODS_PER_DAY);
+    const slotIndex = (gene.timeslotId - 1) % PERIODS_PER_DAY;
+
+    return {
+      dayIndex,
+      slotIndex,
+      duration: gene.units, // FIX
+    };
+  }
+
+  // Build lookup maps — timeslotMap uses TIME_SLOTS (now 45 slots, 9/day)
+  const timeslotMap = new Map(TIME_SLOTS.map((t) => [t.id, t]));
   const courseMap = new Map(state.courses.map((c) => [c.id, c]));
   const lecturerMap = new Map(state.lecturers.map((l) => [l.id, l]));
   const roomMap = new Map(state.rooms.map((r) => [r.id, r]));
-  const timeslotMap = new Map(state.timeslots.map((t) => [t.id, t]));
 
   const conflictCells = new Set<string>();
   const occupiedSlots = new Map<string, string[]>();
 
   for (const gene of state.timetable) {
     const slot = timeslotMap.get(gene.timeslotId);
+
     if (!slot) continue;
 
     const geneSlot = getGeneSlot(gene);
+
     if (!geneSlot) continue;
 
     const { dayIndex, slotIndex, duration } = geneSlot;
 
     for (let s = 0; s < duration; s++) {
       const slotIdx = slotIndex + s;
-      if (slotIdx >= TIME_SLOTS.length) continue;
+      if (slotIdx >= PERIODS_PER_DAY) continue;
 
       const occKey = `${slotIdx}-${dayIndex}`;
 
@@ -76,17 +93,6 @@ export function TimetableGrid() {
         conflictCells.add(occKey);
       }
     }
-  }
-
-  function getGeneSlot(gene: Gene) {
-    const slot = timeslotMap.get(gene.timeslotId);
-    if (!slot) return null;
-
-    return {
-      dayIndex: slot.day,
-      slotIndex: slot.start_period - 1,
-      duration: slot.duration,
-    };
   }
 
   type CellState =
@@ -124,10 +130,11 @@ export function TimetableGrid() {
       let placed = false;
 
       const slotIndex = slot.start_period - 1;
-      let actualDuration = slot.duration;
+      // let actualDuration = slot.duration;
+      let actualDuration = gene.units;
 
-      if (slotIndex + actualDuration > TIME_SLOTS.length) {
-        actualDuration = TIME_SLOTS.length - slotIndex;
+      if (slotIndex + actualDuration > PERIODS_PER_DAY) {
+        actualDuration = PERIODS_PER_DAY - slotIndex;
       }
 
       // Find first track where these slots are free
@@ -158,7 +165,7 @@ export function TimetableGrid() {
       }
 
       if (!placed) {
-        const newTrack: CellState[] = Array(TIME_SLOTS.length)
+        const newTrack: CellState[] = Array(PERIODS_PER_DAY)
           .fill(null)
           .map(() => ({ type: "empty" }));
 
@@ -178,7 +185,7 @@ export function TimetableGrid() {
 
     if (tracks.length === 0) {
       tracks.push(
-        Array(TIME_SLOTS.length)
+        Array(PERIODS_PER_DAY)
           .fill(null)
           .map(() => ({ type: "empty" })),
       );
@@ -206,8 +213,11 @@ export function TimetableGrid() {
 
     if (!slot) return;
 
-    const startTime = `Period ${slot.start_period}`;
-    const endTime = `Period ${slot.start_period + slot.duration - 1}`;
+    const startIdx = slot.start_period - 1;
+    const endIdx = startIdx + gene.units - 1;
+
+    const startTime = PERIOD_TIME[startIdx]?.start;
+    const endTime = PERIOD_TIME[endIdx]?.end;
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 
@@ -231,7 +241,7 @@ export function TimetableGrid() {
         <h2 className="page-title">Timetable</h2>
         <p className="page-description">
           Generated schedule · Fitness:{" "}
-          <strong>{state.bestFitness.toFixed(1)}</strong> · Generation:{" "}
+          <strong>{state.bestFitness?.toFixed(2) ?? "-"}</strong> · Generation:{" "}
           {state.currentGeneration}
         </p>
       </div>
@@ -264,16 +274,14 @@ export function TimetableGrid() {
             </tr>
           </thead>
           <tbody>
-            {TIME_SLOTS.map((slot, slotIdx) => {
+            {Array.from({ length: PERIODS_PER_DAY }).map((_, slotIdx) => {
               const isFirstMorning = slotIdx === 0;
               const isFirstAfternoon = slotIdx === 5;
 
               return (
                 <tr
                   key={slotIdx}
-                  className={
-                    slot.start_period <= 5 ? "morning-row" : "afternoon-row"
-                  }
+                  className={slotIdx < 5 ? "morning-row" : "afternoon-row"}
                 >
                   {isFirstMorning && (
                     <td className="session-cell morning-cell" rowSpan={5}>
@@ -287,19 +295,18 @@ export function TimetableGrid() {
                   )}
 
                   <td className="period-cell">
-                    <span className="period-num">{slot.start_period}</span>
+                    <span className="period-num">{slotIdx + 1}</span>
                   </td>
 
                   <td className="time-cell">
-                    <span className="time-range">
-                      Period {slot.start_period}
-                    </span>
+                    <span className="time-range">Period {slotIdx + 1}</span>
                   </td>
 
                   {DAYS.map((_, dayIdx) => {
                     return dayTracks[dayIdx].map((track, trackIdx) => {
                       const cellState = track[slotIdx];
-                      const key = `${dayIdx}-${slotIdx}`;
+                      // const key = `${dayIdx}-${slotIdx}`;
+                      const key = `${slotIdx}-${dayIdx}`;
                       const hasConflict = conflictCells.has(key);
 
                       if (cellState.type === "covered") return null;
@@ -310,13 +317,15 @@ export function TimetableGrid() {
                           { type: "start" }
                         >;
                         const course = courseMap.get(gene.courseId);
+                        console.log(`Course:  ${course}`);
+
                         const lecturer = lecturerMap.get(gene.lecturerId);
                         const room = roomMap.get(gene.roomId);
                         const slot = timeslotMap.get(gene.timeslotId);
                         if (!slot) return null;
 
                         const startPeriod = slot.start_period;
-                        const duration = slot.duration;
+                        const duration = gene.units;
 
                         const startTime = `Period ${startPeriod}`;
                         const endTime = `Period ${startPeriod + duration - 1}`;
@@ -337,12 +346,6 @@ export function TimetableGrid() {
                             >
                               <span className="cell-name">
                                 {course?.name || ""}
-                              </span>
-                              <span className="cell-course">
-                                ID: {course?.id || gene.courseId}
-                              </span>
-                              <span className="cell-time">
-                                {startTime} - {endTime}
                               </span>
                               <span className="cell-room">
                                 {room?.name || ""}

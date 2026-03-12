@@ -1,9 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // Data Manager: tabbed CRUD for lecturers, courses, rooms
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppState } from "../data/store";
 import type { Lecturer, Course, Room } from "../data/types";
 import { DAYS } from "../data/types";
+import { lecturerApi } from "../api/lecturerApi";
+import { courseApi } from "../api/courseApi";
+import { roomApi } from "../api/roomApi";
 
 type Tab = "lecturers" | "courses" | "rooms";
 
@@ -25,10 +28,25 @@ const ROOM_TYPES: Array<"lecture" | "lab" | "seminar"> = [
   "seminar",
 ];
 
-
 export function DataManager() {
-  const { state } = useAppState();
+  const { state, dispatch } = useAppState();
   const [activeTab, setActiveTab] = useState<Tab>("lecturers");
+
+  useEffect(() => {
+  const fetchData = async () => {
+    const [lecturers, courses, rooms] = await Promise.all([
+      lecturerApi.getAll(),
+      courseApi.getAll(),
+      roomApi.getAll(),
+    ]);
+
+    dispatch({ type: "SET_LECTURERS", payload: lecturers.data });
+    dispatch({ type: "SET_COURSES", payload: courses.data });
+    dispatch({ type: "SET_ROOMS", payload: rooms.data });
+  };
+
+  fetchData();
+}, []);
 
   const tabs: { id: Tab; label: string; count: number }[] = [
     { id: "lecturers", label: "Lecturers", count: state.lecturers.length },
@@ -72,19 +90,33 @@ function LecturersTab() {
   const [maxHours, setMaxHours] = useState(12);
   const [days, setDays] = useState<number[]>([0, 1, 2]);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!name.trim()) return;
+
     const newLec: Lecturer = {
-      id: Date.now(), // number thay vì string
+      id: Date.now(),
       name: name.trim(),
       maxUnitPerWeek: maxHours,
       preferenceDay: days,
     };
-    dispatch({ type: "ADD_LECTURER", payload: newLec });
-    setName("");
-    setMaxHours(12);
-    setDays([0, 1, 2]);
-    setShowForm(false);
+
+    try {
+      const res = await lecturerApi.create(newLec);
+
+      dispatch({ type: "ADD_LECTURER", payload: res.data });
+
+      setName("");
+      setMaxHours(12);
+      setDays([0, 1, 2]);
+      setShowForm(false);
+    } catch (err) {
+      console.error("Create lecturer error", err);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    await lecturerApi.delete(id);
+    dispatch({ type: "REMOVE_LECTURER", payload: id });
   };
 
   return (
@@ -152,16 +184,11 @@ function LecturersTab() {
               <span className="item-detail">
                 Max {lec.maxUnitPerWeek} units/week · Prefers:
                 {lec.preferenceDay
-                  .map((d: number) => DAYS[d].slice(0, 3))
+                  .map((d: number) => DAYS[d - 1]?.slice(0,3))
                   .join(", ")}
               </span>
             </div>
-            <button
-              className="btn-delete"
-              onClick={() =>
-                dispatch({ type: "REMOVE_LECTURER", payload: lec.id })
-              }
-            >
+            <button className="btn-delete" onClick={() => handleDelete(lec.id)}>
               🗑️
             </button>
           </div>
@@ -178,30 +205,45 @@ function CoursesTab() {
   const [code, setCode] = useState("");
   const [units, setUnits] = useState(3);
   const [sessionDuration, setSessionDuration] = useState(3);
-  const [lecturerId, setLecturerId] = useState<number>(state.lecturers[0]?.id || 0)
+  const [lecturerId, setLecturerId] = useState<number>(
+    state.lecturers[0]?.id || 0,
+  );
   const [students, setStudents] = useState(40);
   const [roomType, setRoomType] = useState<"lecture" | "lab" | "seminar">(
     "lecture",
   );
 
-  const handleAdd = () => {
-    if (!name.trim() || !code.trim()) return;
+  const handleAdd = async () => {
+    if (!name.trim()) return;
+
     const newCourse: Course = {
-    id: Date.now(),
-    name: name.trim(),
-    unitsPerWeek: units,
-    studentsCount: students,
-    roomType: [roomType], 
-    lecturerId: Number(lecturerId),
-    maxUnitsPerDay: sessionDuration
-};
-    dispatch({ type: "ADD_COURSE", payload: newCourse });
-    setName("");
-    setCode("");
-    setUnits(3);
-    setSessionDuration(3);
-    setStudents(40);
-    setShowForm(false);
+      id: Date.now(),
+      name: name.trim(),
+      unitsPerWeek: units,
+      studentsCount: students,
+      roomType: [roomType],
+      lecturerId: lecturerId,
+      maxUnitsPerDay: sessionDuration,
+    };
+
+    try {
+      const res = await courseApi.create(newCourse);
+
+      dispatch({ type: "ADD_COURSE", payload: res.data });
+
+      setName("");
+      setUnits(3);
+      setStudents(40);
+      setSessionDuration(3);
+      setShowForm(false);
+    } catch (err) {
+      console.error("Create course error", err);
+    }
+  };
+
+  const handleDeleteCourse = async (id: number) => {
+    await courseApi.delete(id);
+    dispatch({ type: "REMOVE_COURSE", payload: id });
   };
 
   const getLecturerName = (id: number) =>
@@ -324,9 +366,7 @@ function CoursesTab() {
                 style={{ backgroundColor: "#666" }}
               ></div>
               <div className="item-info">
-                <span className="item-name">
-                  {course.name}
-                </span>
+                <span className="item-name">{course.name}</span>
                 <span className="item-detail">
                   {getLecturerName(course.lecturerId)} · {course.unitsPerWeek}{" "}
                   units/wk · {course.maxUnitsPerDay}p/session ·{" "}
@@ -335,9 +375,7 @@ function CoursesTab() {
               </div>
               <button
                 className="btn-delete"
-                onClick={() =>
-                  dispatch({ type: "REMOVE_COURSE", payload: course.id })
-                }
+                onClick={() => handleDeleteCourse(course.id)}
               >
                 🗑️
               </button>
@@ -356,18 +394,32 @@ function RoomsTab() {
   const [capacity, setCapacity] = useState(50);
   const [type, setType] = useState<"lecture" | "lab" | "seminar">("lecture");
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!name.trim()) return;
+
     const newRoom: Room = {
-    id: Date.now(),
-    name: name.trim(),
-    capacity,
-    type
-};
-    dispatch({ type: "ADD_ROOM", payload: newRoom });
-    setName("");
-    setCapacity(50);
-    setShowForm(false);
+      id: Date.now(),
+      name: name.trim(),
+      capacity,
+      type,
+    };
+
+    try {
+      const res = await roomApi.create(newRoom);
+
+      dispatch({ type: "ADD_ROOM", payload: res.data });
+
+      setName("");
+      setCapacity(50);
+      setShowForm(false);
+    } catch (err) {
+      console.error("Create room error", err);
+    }
+  };
+
+  const handleDeleteRoom = async (id: number) => {
+    await roomApi.delete(id);
+    dispatch({ type: "REMOVE_ROOM", payload: id });
   };
 
   const typeIcons: Record<string, string> = {
@@ -442,9 +494,7 @@ function RoomsTab() {
             </div>
             <button
               className="btn-delete"
-              onClick={() =>
-                dispatch({ type: "REMOVE_ROOM", payload: room.id })
-              }
+              onClick={()=> handleDeleteRoom(room.id)}
             >
               🗑️
             </button>

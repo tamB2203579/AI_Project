@@ -52,12 +52,30 @@ type Action =
   | { type: "LOAD_STATE"; payload: Partial<AppState> }
   | { type: "SET_TIMESLOTS"; payload: TimeSlot[] };
 
-const defaultGAConfig: GAConfig = {
-  populationSize: 60,
-  mutationRate: 0.05,
-  crossoverRate: 0.8,
+export const defaultGAConfig: GAConfig = {
+  populationSize: 100,
   maxGenerations: 500,
-  tournamentSize: 3,
+
+  selectionMethod: "tournament",
+  tournamentK: 3,
+
+  crossoverMethod: "single",
+  crossoverRate: 0.8,
+  multipointN: 2,
+
+  mutationMethod: "swap",
+  mutationRate: 0.1,
+
+  elitismRate: 0.1,
+
+  fitnessMethod: "alpha-beta",
+
+  alpha: 1000,
+  beta: 10,
+
+  baseScore: 1000,
+  hardPenalty: 50,
+  softReward: 10,
 };
 
 function loadFromStorage(): Partial<AppState> {

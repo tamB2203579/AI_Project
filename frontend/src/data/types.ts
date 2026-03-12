@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // // Core data types for the timetable management application
 
 // export interface Lecturer {
@@ -122,19 +123,59 @@ export interface Gene {
     lecturerId: number;
     roomId: number;
     timeslotId: number;
+    units: number
 }
 
 export type Chromosome = Gene[];
 
+export type SelectionMethod =
+  | "tournament"
+  | "roulette"
+  | "rank";
+
+export type CrossoverMethod =
+  | "single"
+  | "two-point"
+  | "multipoint"
+  | "uniform";
+
+export type MutationMethod =
+  | "swap"
+  | "scramble"
+  | "random";
+
+export type FitnessMethod =
+  | "alpha-beta"
+  | "penalty";
+
 export interface GAConfig {
-    populationSize: number;
-    mutationRate: number;
-    crossoverRate: number;
-    maxGenerations: number;
-    tournamentSize: number;
+  populationSize: number
+  maxGenerations: number
+
+  selectionMethod: SelectionMethod
+  tournamentK: number
+
+  crossoverMethod: CrossoverMethod
+  crossoverRate: number
+  multipointN: number
+
+  mutationMethod: MutationMethod
+  mutationRate: number
+
+  elitismRate: number
+
+  fitnessMethod: FitnessMethod
+
+  alpha: number
+  beta: number
+
+  baseScore: number
+  hardPenalty: number
+  softReward: number
 }
 
 export interface GAResult {
+    schedule: any;
     bestChromosome: Chromosome;
     fitnessHistory: number[];
     generations: number;
@@ -143,15 +184,27 @@ export interface GAResult {
 
 export const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
-export const TIME_SLOTS: TimeSlot[] = [
-  { id: 1, day: 0, start_period: 1, duration: 1 },
-  { id: 2, day: 0, start_period: 2, duration: 1 },
-  { id: 3, day: 0, start_period: 3, duration: 1 },
-  { id: 4, day: 0, start_period: 4, duration: 1 },
-  { id: 5, day: 0, start_period: 5, duration: 1 },
+// 9 periods/day × 5 days = 45 slots  →  backend timeslot IDs go up to 45
+// Periods 1-5 = Morning, 6-9 = Afternoon
+export const PERIODS_PER_DAY = 9;
 
-  { id: 6, day: 1, start_period: 1, duration: 1 },
-  { id: 7, day: 1, start_period: 2, duration: 1 },
-  { id: 8, day: 1, start_period: 3, duration: 1 },
-  { id: 9, day: 1, start_period: 4, duration: 1 },
+export const TIME_SLOTS: TimeSlot[] = Array.from({ length: 5 }, (_, dayIdx) =>
+  Array.from({ length: PERIODS_PER_DAY }, (_, periodIdx) => ({
+    id: dayIdx * PERIODS_PER_DAY + periodIdx + 1,
+    day: dayIdx,                  // 0=Mon … 4=Fri
+    start_period: periodIdx + 1,  // 1–9
+    duration: 1,
+  }))
+).flat();
+
+export const PERIOD_TIME = [
+  { start: "07:00", end: "07:50" },
+  { start: "07:50", end: "08:40" },
+  { start: "08:50", end: "09:40" },
+  { start: "09:50", end: "10:40" },
+  { start: "10:40", end: "11:30" },
+  { start: "13:30", end: "14:20" },
+  { start: "14:20", end: "15:10" },
+  { start: "15:20", end: "16:10" },
+  { start: "16:10", end: "17:00" },
 ];

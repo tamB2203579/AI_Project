@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 
 
-class Course(BaseModel):
+@dataclass(slots=True)
+class Course:
     id: int
     name: str
     unitsPerWeek: int

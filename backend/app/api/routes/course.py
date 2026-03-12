@@ -1,3 +1,4 @@
+import dataclasses
 from fastapi import APIRouter, HTTPException
 from app.schemas import Course
 from app import data_store
@@ -18,7 +19,7 @@ def get_course(course_id: int):
 @router.post("/", status_code=201)
 def create_course(course: Course):
     items = data_store.get_collection("courses")
-    new_item = course.model_dump()
+    new_item = dataclasses.asdict(course)
     new_item["id"] = data_store.next_id("courses")
     items.append(new_item)
     data_store.set_collection("courses", items)
@@ -29,7 +30,7 @@ def update_course(course_id: int, course: Course):
     items = data_store.get_collection("courses")
     for i, c in enumerate(items):
         if c.get("id") == course_id:
-            updated = course.model_dump()
+            updated = dataclasses.asdict(course)
             updated["id"] = course_id
             items[i] = updated
             data_store.set_collection("courses", items)

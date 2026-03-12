@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 
 
-class Gene(BaseModel):
+@dataclass(slots=True)
+class Gene:
     lecturer_id: int
     room_id: int
     course_id: int

@@ -1,8 +1,9 @@
 from typing import Any
-from pydantic import BaseModel
+from dataclasses import dataclass
 from app.schemas.gene import Gene
 
 
-class Chromosome(BaseModel):
+@dataclass(slots=True)
+class Chromosome:
     genes: list[Gene]
     fitness: Any = 0.0

@@ -1,3 +1,4 @@
+import dataclasses
 from fastapi import APIRouter, HTTPException
 from app.schemas import TimeSlot
 from app import data_store
@@ -18,7 +19,7 @@ def get_timeslot(timeslot_id: int):
 @router.post("/", status_code=201)
 def create_timeslot(timeslot: TimeSlot):
     items = data_store.get_collection("timeslots")
-    new_item = timeslot.model_dump()
+    new_item = dataclasses.asdict(timeslot)
     new_item["id"] = data_store.next_id("timeslots")
     items.append(new_item)
     data_store.set_collection("timeslots", items)
@@ -29,7 +30,7 @@ def update_timeslot(timeslot_id: int, timeslot: TimeSlot):
     items = data_store.get_collection("timeslots")
     for i, t in enumerate(items):
         if t.get("id") == timeslot_id:
-            updated = timeslot.model_dump()
+            updated = dataclasses.asdict(timeslot)
             updated["id"] = timeslot_id
             items[i] = updated
             data_store.set_collection("timeslots", items)

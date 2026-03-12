@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 
 
-class Lecturer(BaseModel):
+@dataclass(slots=True)
+class Lecturer:
     id: int
     name: str
     maxUnitPerWeek: int

@@ -1,6 +1,4 @@
-import copy
 from typing import List, Dict, Any, Optional
-
 from app.data_store import get_collection
 from app.schemas import Course, Lecturer, Room, TimeSlot 
 
@@ -117,7 +115,8 @@ class GAScheduler:
             # Update overall best
             if self.best_chromosome is None or current_best_fitness > self.best_fitness:
                 self.best_fitness = current_best_fitness
-                self.best_chromosome = copy.deepcopy(current_best)
+                import dataclasses
+                self.best_chromosome = Chromosome(genes=[dataclasses.replace(g) for g in current_best.genes], fitness=current_best.fitness)
             
             # Check stopping
             should_stop, stop_reason = self.stopping.check_stop_and_adapt(generation, float(scalar_fitness))

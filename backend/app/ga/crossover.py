@@ -1,14 +1,14 @@
 import random
-import copy
+import dataclasses
 from app.schemas import Chromosome
 
 def single_point_crossover(parent1: Chromosome, parent2: Chromosome):
     length = len(parent1.genes)
     if length <= 1:
-        return Chromosome(genes=copy.deepcopy(parent1.genes)), Chromosome(genes=copy.deepcopy(parent2.genes))
+        return Chromosome(genes=parent1.genes.copy()), Chromosome(genes=parent2.genes.copy())
     point = random.randint(1, length - 1)
-    child1_genes = copy.deepcopy(parent1.genes[:point]) + copy.deepcopy(parent2.genes[point:])
-    child2_genes = copy.deepcopy(parent2.genes[:point]) + copy.deepcopy(parent1.genes[point:])
+    child1_genes = parent1.genes[:point] + parent2.genes[point:]
+    child2_genes = parent2.genes[:point] + parent1.genes[point:]
     return Chromosome(genes=child1_genes), Chromosome(genes=child2_genes)
 
 def two_point_crossover(parent1: Chromosome, parent2: Chromosome):
@@ -19,13 +19,13 @@ def two_point_crossover(parent1: Chromosome, parent2: Chromosome):
     point1 = random.randint(1, length - 2)
     point2 = random.randint(point1 + 1, length - 1)
     
-    child1_genes = (copy.deepcopy(parent1.genes[:point1]) + 
-                    copy.deepcopy(parent2.genes[point1:point2]) + 
-                    copy.deepcopy(parent1.genes[point2:]))
+    child1_genes = (parent1.genes[:point1] + 
+                    parent2.genes[point1:point2] + 
+                    parent1.genes[point2:])
                     
-    child2_genes = (copy.deepcopy(parent2.genes[:point1]) + 
-                    copy.deepcopy(parent1.genes[point1:point2]) + 
-                    copy.deepcopy(parent2.genes[point2:]))
+    child2_genes = (parent2.genes[:point1] + 
+                    parent1.genes[point1:point2] + 
+                    parent2.genes[point2:])
                     
     return Chromosome(genes=child1_genes), Chromosome(genes=child2_genes)
 
@@ -33,11 +33,11 @@ def uniform_crossover(parent1: Chromosome, parent2: Chromosome):
     child1_genes, child2_genes = [], []
     for g1, g2 in zip(parent1.genes, parent2.genes):
         if random.random() < 0.5:
-            child1_genes.append(copy.deepcopy(g1))
-            child2_genes.append(copy.deepcopy(g2))
+            child1_genes.append(dataclasses.replace(g1))
+            child2_genes.append(dataclasses.replace(g2))
         else:
-            child1_genes.append(copy.deepcopy(g2))
-            child2_genes.append(copy.deepcopy(g1))
+            child1_genes.append(dataclasses.replace(g2))
+            child2_genes.append(dataclasses.replace(g1))
     return Chromosome(genes=child1_genes), Chromosome(genes=child2_genes)
 
 def multi_point_crossover(parent1: Chromosome, parent2: Chromosome, n=3):
@@ -59,16 +59,16 @@ def multi_point_crossover(parent1: Chromosome, parent2: Chromosome, n=3):
     last_point = 0
     
     for point in points:
-        child1_genes.extend(copy.deepcopy(curr_parent1[last_point:point]))
-        child2_genes.extend(copy.deepcopy(curr_parent2[last_point:point]))
+        child1_genes.extend(curr_parent1[last_point:point])
+        child2_genes.extend(curr_parent2[last_point:point])
         
         # Hoán đổi cha mẹ cho đoạn kế tiếp
         curr_parent1, curr_parent2 = curr_parent2, curr_parent1
         last_point = point
         
     # Thêm đoạn cuối cùng sau điểm cắt cuối
-    child1_genes.extend(copy.deepcopy(curr_parent1[last_point:]))
-    child2_genes.extend(copy.deepcopy(curr_parent2[last_point:]))
+    child1_genes.extend(curr_parent1[last_point:])
+    child2_genes.extend(curr_parent2[last_point:])
     
     return Chromosome(genes=child1_genes), Chromosome(genes=child2_genes)
 
@@ -94,6 +94,6 @@ def crossover_population(population, method="single_point", crossover_rate=0.8, 
                 c1, c2 = single_point_crossover(parent1, parent2)
             new_population.extend([c1, c2])
         else:
-            new_population.extend([copy.deepcopy(parent1), copy.deepcopy(parent2)])
+            new_population.extend([Chromosome(genes=parent1.genes.copy()), Chromosome(genes=parent2.genes.copy())])
             
     return new_population[:pop_size]

@@ -14,7 +14,7 @@ def evaluate_hard_constraints(
     Phân loại vi phạm thành 3 nhóm cơ bản:
     1. Trùng lặp (overlap): Giảng viên dạy 2 lớp cùng lúc, hoặc 2 lớp học chung 1 phòng.
     2. Thời gian (time): Tổng thời lượng vượt qua 9 tiết/ngày, hoặc vắt ngang ca sáng (<= tiết 5) và chiều (>= tiết 6).
-    3. Phù hợp chuẩn (room_suitability): Phòng học bị thiếu chỗ ngồi so với sĩ số, hoặc sai loại phòng (ví dụ Lý thuyết vs Thực hành).
+    3. Phù hợp chuẩn (room_suitability): Phòng học bị sai loại phòng (ví dụ Lý thuyết vs Thực hành).
     """
     counts = {
         "overlap_violations": 0,
@@ -54,12 +54,7 @@ def evaluate_hard_constraints(
             )
 
         # Nhóm Ràng Buộc Cơ Sở Vật Chất (Phòng Học)
-        # 1. Sức chứa phòng không đáp ứng đủ tổng sinh viên
-        if room.capacity < course.studentsCount:
-            counts["room_suitability_violations"] += 1
-            violation_details.append(
-                f"Phòng quá nhỏ: Môn {course.id} có {course.studentsCount} sv, nhưng P.{room.id} chỉ chứa {room.capacity}"
-            )
+        # Sức chứa phòng không đáp ứng đủ tổng sinh viên sẽ được chuyển qua Soft Constraints
 
         # 2. Loại phòng không đúng yêu cầu của môn học (vd: cần phòng Máy Tính, nhưng xếp vào Lý Thuyết)
         if room.type not in course.roomType:
@@ -123,6 +118,7 @@ def evaluate_soft_constraints(
         "workload_score": 0,
         "idle_time_score": 0,
         "movement_score": 0,
+        "capacity_score": 0,
     }
     details = []
 
@@ -140,6 +136,19 @@ def evaluate_soft_constraints(
             details.append(
                 f"[Preference] Giảng viên {lecturer.id} được xếp đúng ngày mong muốn (Ngày {timeslot.day})"
             )
+
+        # Kiểm tra Sức chứa phòng học (Room Capacity)
+        course = courses_dict[gene.course_id]
+        room = rooms_dict[gene.room_id]
+        if room.capacity < course.studentsCount:
+            # Phạt điểm mềm nếu phòng không đủ chỗ
+            scores["capacity_score"] -= 1
+            details.append(
+                f"[Capacity] Phòng quá nhỏ: Môn {course.id} có {course.studentsCount} sv, nhưng P.{room.id} chỉ chứa {room.capacity}"
+            )
+        else:
+            # Thưởng 1 điểm nếu xếp được phòng đủ chỗ
+            scores["capacity_score"] += 1
 
         lecturer_key = (lecturer.id, timeslot.day)
         if lecturer_key not in lecturer_schedule:
@@ -360,22 +369,24 @@ def weighted_fitness(
         chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
     )
 
-    # TRỌNG SỐ CHO HARD CONSTRAINTS (Tổng: 0.70)
+    # TRỌNG SỐ CHO HARD CONSTRAINTS (Tổng: 0.55)
     w_overlap = 0.35  # 35% cho Trùng lịch (Nghiêm trọng nhất)
     w_time = 0.20  # 20% cho Sai khung giờ
-    w_room = 0.15  # 15% cho Phòng sai tính chất/sức chứa
+    
+    # Ở đây do room.capacity bị gỡ khỏi hard constraints nên ta chỉ đo lại room type vi phạm
+    score_room = 1.0 / (1.0 + hard_counts["room_suitability_violations"]) 
 
-    # TRỌNG SỐ CHO SOFT CONSTRAINTS (Tổng: 0.30)
+    # TRỌNG SỐ CHO SOFT CONSTRAINTS (Tổng: 0.45)
     w_pref = 0.10  # 10% Sở thích ưu tiên
     w_workload = 0.08  # 8% Khối lượng làm việc liên tục
     w_idle = 0.07  # 7% Thời gian rảnh rỗi chờ ca dạy
     w_move = 0.05  # 5% Đổi phòng
+    w_capacity = 0.15  # 15% cho Sức chứa phòng (Capacity)
 
     # CHUẨN HOÁ HARD-CONSTRAINTS VỀ THANG (0 -> 1.0]
     # Bản chất: Lỗi càng nhiều (Mẫu số to) thì Giá trị đem nhân Weight càng tụt mất (Gần về 0)
     score_overlap = 1.0 / (1.0 + hard_counts["overlap_violations"])
     score_time = 1.0 / (1.0 + hard_counts["time_violations"])
-    score_room = 1.0 / (1.0 + hard_counts["room_suitability_violations"])
 
     # CHUẨN HOÁ SOFT-CONSTRAINTS VỀ THANG (0.0 -> 1.0)
     # Vì Soft Score là dạng tổng điểm (+) / phạt trừ biên độ (-), khó kiểm soát cận độ giới hạn.
@@ -390,17 +401,19 @@ def weighted_fitness(
     s_workload = normalize_sigmoid(soft_scores["workload_score"])
     s_idle = normalize_sigmoid(soft_scores["idle_time_score"])
     s_move = normalize_sigmoid(soft_scores["movement_score"])
+    s_capacity = normalize_sigmoid(soft_scores["capacity_score"])
 
     # KẾT XUẤT FINAL SCORE [Tổng W là 1.0]
     # Giá trị độ thích nghi cao nhất hoàn hảo của lý thuyết sẽ xấp xỉ là 1.0
     chromosome.fitness = (
         (w_overlap * score_overlap)
         + (w_time * score_time)
-        + (w_room * score_room)
+        + (0 * score_room) # Ignore score room if it's 0 (removed capacity from hard constraint sum) 
         + (w_pref * s_pref)
         + (w_workload * s_workload)
         + (w_idle * s_idle)
         + (w_move * s_move)
+        + (w_capacity * s_capacity)
     )
     return chromosome.fitness
 

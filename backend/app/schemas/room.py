@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 
 
-class Room(BaseModel):
+@dataclass(slots=True)
+class Room:
     id: int
     name: str
     capacity: int

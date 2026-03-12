@@ -1,3 +1,4 @@
+import dataclasses
 from fastapi import APIRouter, HTTPException
 from app.schemas import Room
 from app import data_store
@@ -18,7 +19,7 @@ def get_room(room_id: int):
 @router.post("/", status_code=201)
 def create_room(room: Room):
     items = data_store.get_collection("rooms")
-    new_item = room.model_dump()
+    new_item = dataclasses.asdict(room)
     new_item["id"] = data_store.next_id("rooms")
     items.append(new_item)
     data_store.set_collection("rooms", items)
@@ -29,7 +30,7 @@ def update_room(room_id: int, room: Room):
     items = data_store.get_collection("rooms")
     for i, r in enumerate(items):
         if r.get("id") == room_id:
-            updated = room.model_dump()
+            updated = dataclasses.asdict(room)
             updated["id"] = room_id
             items[i] = updated
             data_store.set_collection("rooms", items)

@@ -154,7 +154,7 @@
       "id": 1,
       "name": "Toan Cao Cap",
       "unitsPerWeek": 8,
-      "StudentsCount": 60,
+      "studentsCount": 60,
       "roomType": [
         "Lecture"
       ],
@@ -164,8 +164,8 @@
     {
       "id": 2,
       "name": "Lap Trinh C++",
-      "unitsPerWeek": 10,
-      "StudentsCount": 30,
+      "unitsPerWeek": 9,
+      "studentsCount": 30,
       "roomType": [
         "Lab",
         "Lecture"
@@ -177,7 +177,7 @@
       "id": 3,
       "name": "Tri Tue Nhan Tao",
       "unitsPerWeek": 8,
-      "StudentsCount": 80,
+      "studentsCount": 80,
       "roomType": [
         "Lecture"
       ],
@@ -188,7 +188,7 @@
       "id": 4,
       "name": "Kien Truc May Tinh",
       "unitsPerWeek": 4,
-      "StudentsCount": 45,
+      "studentsCount": 45,
       "roomType": [
         "Lecture",
         "Lab"
@@ -200,7 +200,7 @@
       "id": 5,
       "name": "Mang May Tinh",
       "unitsPerWeek": 6,
-      "StudentsCount": 50,
+      "studentsCount": 50,
       "roomType": [
         "Lecture",
         "Lab"
@@ -212,7 +212,7 @@
       "id": 6,
       "name": "Do Hoa May Tinh",
       "unitsPerWeek": 4,
-      "StudentsCount": 35,
+      "studentsCount": 35,
       "roomType": [
         "Lab"
       ],
@@ -223,7 +223,7 @@
       "id": 7,
       "name": "Vat Ly Dai Cuong",
       "unitsPerWeek": 6,
-      "StudentsCount": 90,
+      "studentsCount": 90,
       "roomType": [
         "Lecture"
       ],
@@ -234,7 +234,7 @@
       "id": 8,
       "name": "Thuc Hanh AI",
       "unitsPerWeek": 4,
-      "StudentsCount": 30,
+      "studentsCount": 30,
       "roomType": [
         "Lab"
       ],

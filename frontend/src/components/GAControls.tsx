@@ -75,7 +75,7 @@ export function GAControls() {
       };
 
       const res = await scheduleApi.generate(payload);
-      console.log(res);
+      // console.log(res);
 
       const result = res.data;
 

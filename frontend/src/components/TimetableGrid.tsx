@@ -21,9 +21,9 @@ export function TimetableGrid() {
   const { state } = useAppState();
   const [popup, setPopup] = useState<PopupInfo | null>(null);
 
-  console.log("COURSES:", state.courses);
-  console.log("TIMETABLE:", state.timetable);
-  console.log("TIME Slot:", TIME_SLOTS);
+  // console.log("COURSES:", state.courses);
+  // console.log("TIMETABLE:", state.timetable);
+  // console.log("TIME Slot:", TIME_SLOTS);
 
   if (!state.timetable || state.timetable.length === 0) {
     return (
@@ -317,7 +317,7 @@ export function TimetableGrid() {
                           { type: "start" }
                         >;
                         const course = courseMap.get(gene.courseId);
-                        console.log(`Course:  ${course}`);
+                        // console.log(`Course:  ${course}`);
 
                         const lecturer = lecturerMap.get(gene.lecturerId);
                         const room = roomMap.get(gene.roomId);

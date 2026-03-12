@@ -66,7 +66,7 @@ def generate_random_chromosome(sessions, lecturers, rooms, timeslots):
         lecturer = random.choice(lecturers)
         room = random.choice(rooms)
 
-        valid_slots = [s for s in timeslots if s.duration >= units]
+        valid_slots = [s for s in timeslots if s.start_period + units - 1 <= 9]
 
         if not valid_slots:
             continue
@@ -103,7 +103,7 @@ def generate_greedy_chromosome(sessions, lecturers, rooms, timeslots):
         for lecturer in lecturers:
             for room in rooms:
                 for slot in timeslots:
-                    if slot.duration < units:
+                    if slot.start_period + units - 1 > 9:
                         continue
 
                     score = evaluate_option(course, lecturer, room, slot)
@@ -143,7 +143,7 @@ def generate_semi_greedy_chromosome(sessions, lecturers, rooms, timeslots):
         for lecturer in lecturers:
             for room in rooms:
                 for slot in timeslots:
-                    if slot.duration < units:
+                    if slot.start_period + units - 1 > 9:
                         continue
 
                     score = evaluate_option(course, lecturer, room, slot)

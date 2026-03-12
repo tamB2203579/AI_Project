@@ -1,12 +1,11 @@
 import random
-from app.ga.fitness import evaluate_hard_constraints
 
 def random_reassignment_mutation(gene, lecturers, rooms, timeslots):
     mutate_type = random.choice(["timeslot", "room", "lecturer"])
     
     if mutate_type == "timeslot":
-        # Lọc ra các slot đủ thời lượng VÀ khác với slot hiện tại
-        valid_slots = [s for s in timeslots if s.duration >= gene.units and s.id != gene.timeslot_id]
+        # Lọc ra các slot hợp lệ (không vượt quá period 9) VÀ khác với slot hiện tại
+        valid_slots = [s for s in timeslots if s.start_period + gene.units - 1 <= 9 and s.id != gene.timeslot_id]
         if valid_slots:
             gene.timeslot_id = random.choice(valid_slots).id
             
@@ -47,7 +46,7 @@ def creep_mutation(gene, timeslots):
     valid_creeps = [
         s for s in timeslots 
         if s.day == current_slot.day 
-        and s.duration >= gene.units
+        and s.start_period + gene.units - 1 <= 9
         and s.id != current_slot.id
         and abs(s.start_period - current_slot.start_period) <= 2
     ]

@@ -3,106 +3,355 @@
     {
       "id": 1,
       "day": 1,
-      "start_period": 1,
-      "duration": 3
+      "start_period": 1
     },
     {
       "id": 2,
       "day": 1,
-      "start_period": 4,
-      "duration": 2
+      "start_period": 2
     },
     {
       "id": 3,
       "day": 1,
-      "start_period": 7,
-      "duration": 3
+      "start_period": 3
     },
     {
       "id": 4,
-      "day": 2,
-      "start_period": 1,
-      "duration": 4
+      "day": 1,
+      "start_period": 4
     },
     {
       "id": 5,
-      "day": 2,
-      "start_period": 6,
-      "duration": 4
+      "day": 1,
+      "start_period": 5
     },
     {
       "id": 6,
-      "day": 3,
-      "start_period": 1,
-      "duration": 3
+      "day": 1,
+      "start_period": 6
     },
     {
       "id": 7,
-      "day": 3,
-      "start_period": 4,
-      "duration": 2
+      "day": 1,
+      "start_period": 7
     },
     {
       "id": 8,
-      "day": 4,
-      "start_period": 1,
-      "duration": 5
+      "day": 1,
+      "start_period": 8
     },
     {
       "id": 9,
-      "day": 5,
-      "start_period": 1,
-      "duration": 4
+      "day": 1,
+      "start_period": 9
     },
     {
       "id": 10,
+      "day": 2,
+      "start_period": 1
+    },
+    {
+      "id": 11,
+      "day": 2,
+      "start_period": 2
+    },
+    {
+      "id": 12,
+      "day": 2,
+      "start_period": 3
+    },
+    {
+      "id": 13,
+      "day": 2,
+      "start_period": 4
+    },
+    {
+      "id": 14,
+      "day": 2,
+      "start_period": 5
+    },
+    {
+      "id": 15,
+      "day": 2,
+      "start_period": 6
+    },
+    {
+      "id": 16,
+      "day": 2,
+      "start_period": 7
+    },
+    {
+      "id": 17,
+      "day": 2,
+      "start_period": 8
+    },
+    {
+      "id": 18,
+      "day": 2,
+      "start_period": 9
+    },
+    {
+      "id": 19,
+      "day": 3,
+      "start_period": 1
+    },
+    {
+      "id": 20,
+      "day": 3,
+      "start_period": 2
+    },
+    {
+      "id": 21,
+      "day": 3,
+      "start_period": 3
+    },
+    {
+      "id": 22,
+      "day": 3,
+      "start_period": 4
+    },
+    {
+      "id": 23,
+      "day": 3,
+      "start_period": 5
+    },
+    {
+      "id": 24,
+      "day": 3,
+      "start_period": 6
+    },
+    {
+      "id": 25,
+      "day": 3,
+      "start_period": 7
+    },
+    {
+      "id": 26,
+      "day": 3,
+      "start_period": 8
+    },
+    {
+      "id": 27,
+      "day": 3,
+      "start_period": 9
+    },
+    {
+      "id": 28,
+      "day": 4,
+      "start_period": 1
+    },
+    {
+      "id": 29,
+      "day": 4,
+      "start_period": 2
+    },
+    {
+      "id": 30,
+      "day": 4,
+      "start_period": 3
+    },
+    {
+      "id": 31,
+      "day": 4,
+      "start_period": 4
+    },
+    {
+      "id": 32,
+      "day": 4,
+      "start_period": 5
+    },
+    {
+      "id": 33,
+      "day": 4,
+      "start_period": 6
+    },
+    {
+      "id": 34,
+      "day": 4,
+      "start_period": 7
+    },
+    {
+      "id": 35,
+      "day": 4,
+      "start_period": 8
+    },
+    {
+      "id": 36,
+      "day": 4,
+      "start_period": 9
+    },
+    {
+      "id": 37,
       "day": 5,
-      "start_period": 6,
-      "duration": 4
+      "start_period": 1
+    },
+    {
+      "id": 38,
+      "day": 5,
+      "start_period": 2
+    },
+    {
+      "id": 39,
+      "day": 5,
+      "start_period": 3
+    },
+    {
+      "id": 40,
+      "day": 5,
+      "start_period": 4
+    },
+    {
+      "id": 41,
+      "day": 5,
+      "start_period": 5
+    },
+    {
+      "id": 42,
+      "day": 5,
+      "start_period": 6
+    },
+    {
+      "id": 43,
+      "day": 5,
+      "start_period": 7
+    },
+    {
+      "id": 44,
+      "day": 5,
+      "start_period": 8
+    },
+    {
+      "id": 45,
+      "day": 5,
+      "start_period": 9
     }
   ],
   "rooms": [
     {
       "id": 1,
-      "name": "A1-101",
+      "name": "101/C1",
       "capacity": 50,
       "type": "Lecture"
     },
     {
       "id": 2,
-      "name": "A1-102",
+      "name": "102/C1",
       "capacity": 50,
       "type": "Lecture"
     },
     {
       "id": 3,
-      "name": "B2-201",
-      "capacity": 100,
+      "name": "103/C1",
+      "capacity": 50,
       "type": "Lecture"
     },
     {
       "id": 4,
-      "name": "B2-202",
-      "capacity": 30,
-      "type": "Lab"
+      "name": "104/C1",
+      "capacity": 50,
+      "type": "Lecture"
     },
     {
       "id": 5,
-      "name": "C3-301",
-      "capacity": 60,
+      "name": "105/C1",
+      "capacity": 50,
       "type": "Lecture"
     },
     {
       "id": 6,
-      "name": "C3-302",
-      "capacity": 35,
+      "name": "106/C1",
+      "capacity": 50,
+      "type": "Lecture"
+    },
+    {
+      "id": 7,
+      "name": "107/C1",
+      "capacity": 50,
+      "type": "Lecture"
+    },
+    {
+      "id": 8,
+      "name": "108/C1",
+      "capacity": 50,
+      "type": "Lecture"
+    },
+    {
+      "id": 9,
+      "name": "109/C1",
+      "capacity": 50,
+      "type": "Lecture"
+    },
+    {
+      "id": 10,
+      "name": "110/C1",
+      "capacity": 50,
+      "type": "Lecture"
+    },
+    {
+      "id": 11,
+      "name": "201/DI",
+      "capacity": 40,
+      "type": "Lab"
+    },
+    {
+      "id": 12,
+      "name": "202/DI",
+      "capacity": 40,
+      "type": "Lab"
+    },
+    {
+      "id": 13,
+      "name": "203/DI",
+      "capacity": 40,
+      "type": "Lab"
+    },
+    {
+      "id": 14,
+      "name": "204/DI",
+      "capacity": 40,
+      "type": "Lab"
+    },
+    {
+      "id": 15,
+      "name": "205/DI",
+      "capacity": 40,
+      "type": "Lab"
+    },
+    {
+      "id": 16,
+      "name": "206/DI",
+      "capacity": 40,
+      "type": "Lab"
+    },
+    {
+      "id": 17,
+      "name": "207/DI",
+      "capacity": 40,
+      "type": "Lab"
+    },
+    {
+      "id": 18,
+      "name": "208/DI",
+      "capacity": 40,
+      "type": "Lab"
+    },
+    {
+      "id": 19,
+      "name": "209/DI",
+      "capacity": 40,
+      "type": "Lab"
+    },
+    {
+      "id": 20,
+      "name": "210/DI",
+      "capacity": 40,
       "type": "Lab"
     }
   ],
   "lecturers": [
     {
       "id": 1,
-      "name": "TS. Nguyen Van A",
+      "name": "PhD. Nguyen Huu Hoa",
       "maxUnitPerWeek": 15,
       "preferenceDay": [
         1,
@@ -112,7 +361,7 @@
     },
     {
       "id": 2,
-      "name": "TS. Tran Thi B",
+      "name": "PhD. Luu Tien Dao",
       "maxUnitPerWeek": 12,
       "preferenceDay": [
         3,
@@ -121,7 +370,7 @@
     },
     {
       "id": 3,
-      "name": "ThS. Le Van C",
+      "name": "PhD. Ma Truong Thanh",
       "maxUnitPerWeek": 20,
       "preferenceDay": [
         1,
@@ -132,7 +381,7 @@
     },
     {
       "id": 4,
-      "name": "PGS. Pham Thi D",
+      "name": "PhD. Lam Hoai Bao",
       "maxUnitPerWeek": 10,
       "preferenceDay": [
         5
@@ -140,11 +389,59 @@
     },
     {
       "id": 5,
-      "name": "ThS. Hoang Van E",
+      "name": "Assoc. Prof. Pham Nguyen Khang",
       "maxUnitPerWeek": 18,
       "preferenceDay": [
         2,
         3,
+        5
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Prof. Huynh Xuan Hiep",
+      "maxUnitPerWeek": 14,
+      "preferenceDay": [
+        1,
+        4
+      ]
+    },
+    {
+      "id": 7,
+      "name": "PhD. Phan Phuong Lan",
+      "maxUnitPerWeek": 16,
+      "preferenceDay": [
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "id": 8,
+      "name": "PhD. Nguyen Cong Danh",
+      "maxUnitPerWeek": 15,
+      "preferenceDay": [
+        1,
+        3,
+        5
+      ]
+    },
+    {
+      "id": 9,
+      "name": "PhD. Huynh Quang Nghi",
+      "maxUnitPerWeek": 12,
+      "preferenceDay": [
+        2,
+        4
+      ]
+    },
+    {
+      "id": 10,
+      "name": "PhD. Truong Minh Thai",
+      "maxUnitPerWeek": 18,
+      "preferenceDay": [
+        1,
+        2,
         5
       ]
     }
@@ -152,55 +449,55 @@
   "courses": [
     {
       "id": 1,
-      "name": "Toan Cao Cap",
-      "unitsPerWeek": 8,
+      "name": "Nền tảng công nghệ thông tin",
+      "unitsPerWeek": 4,
       "studentsCount": 60,
       "roomType": [
         "Lecture"
       ],
       "lecturerId": 1,
-      "maxUnitsPerDay": 4
+      "maxUnitsPerDay": 3
     },
     {
       "id": 2,
-      "name": "Lap Trinh C++",
-      "unitsPerWeek": 9,
-      "studentsCount": 30,
+      "name": "Nền tảng trí tuệ nhân tạo",
+      "unitsPerWeek": 4,
+      "studentsCount": 60,
       "roomType": [
-        "Lab",
         "Lecture"
       ],
       "lecturerId": 2,
-      "maxUnitsPerDay": 5
+      "maxUnitsPerDay": 3
     },
     {
       "id": 3,
-      "name": "Tri Tue Nhan Tao",
-      "unitsPerWeek": 8,
-      "studentsCount": 80,
+      "name": "Máy học ứng dụng",
+      "unitsPerWeek": 4,
+      "studentsCount": 50,
       "roomType": [
-        "Lecture"
+        "Lecture",
+        "Lab"
       ],
       "lecturerId": 3,
-      "maxUnitsPerDay": 4
+      "maxUnitsPerDay": 3
     },
     {
       "id": 4,
-      "name": "Kien Truc May Tinh",
+      "name": "Cấu trúc dữ liệu",
       "unitsPerWeek": 4,
-      "studentsCount": 45,
+      "studentsCount": 60,
       "roomType": [
         "Lecture",
         "Lab"
       ],
       "lecturerId": 4,
-      "maxUnitsPerDay": 4
+      "maxUnitsPerDay": 3
     },
     {
       "id": 5,
-      "name": "Mang May Tinh",
-      "unitsPerWeek": 6,
-      "studentsCount": 50,
+      "name": "Phân tích và thiết kế thuật toán",
+      "unitsPerWeek": 4,
+      "studentsCount": 60,
       "roomType": [
         "Lecture",
         "Lab"
@@ -210,36 +507,60 @@
     },
     {
       "id": 6,
-      "name": "Do Hoa May Tinh",
+      "name": "Học sâu công nghệ phần mềm",
       "unitsPerWeek": 4,
-      "studentsCount": 35,
+      "studentsCount": 40,
       "roomType": [
+        "Lecture",
         "Lab"
       ],
-      "lecturerId": 2,
-      "maxUnitsPerDay": 4
+      "lecturerId": 6,
+      "maxUnitsPerDay": 3
     },
     {
       "id": 7,
-      "name": "Vat Ly Dai Cuong",
-      "unitsPerWeek": 6,
-      "studentsCount": 90,
+      "name": "Nhập môn công nghệ phần mềm",
+      "unitsPerWeek": 4,
+      "studentsCount": 70,
       "roomType": [
         "Lecture"
       ],
-      "lecturerId": 1,
+      "lecturerId": 7,
       "maxUnitsPerDay": 3
     },
     {
       "id": 8,
-      "name": "Thuc Hanh AI",
+      "name": "Lập trình căn bản A",
       "unitsPerWeek": 4,
-      "studentsCount": 30,
+      "studentsCount": 60,
       "roomType": [
+        "Lecture",
         "Lab"
       ],
-      "lecturerId": 3,
-      "maxUnitsPerDay": 4
+      "lecturerId": 8,
+      "maxUnitsPerDay": 3
+    },
+    {
+      "id": 9,
+      "name": "Bảo trì phần mềm",
+      "unitsPerWeek": 4,
+      "studentsCount": 40,
+      "roomType": [
+        "Lecture"
+      ],
+      "lecturerId": 9,
+      "maxUnitsPerDay": 3
+    },
+    {
+      "id": 10,
+      "name": "Quản lý dự án phần mềm",
+      "unitsPerWeek": 4,
+      "studentsCount": 50,
+      "roomType": [
+        "Lecture"
+      ],
+      "lecturerId": 10,
+      "maxUnitsPerDay": 3
     }
   ]
 }

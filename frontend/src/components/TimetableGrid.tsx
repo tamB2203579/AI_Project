@@ -278,6 +278,9 @@ export function TimetableGrid() {
                               {course?.name || ""}
                             </span>
                             <span className="cell-room">
+                              {room?.name || ""}
+                            </span>
+                            <span className="cell-lecturer">
                               {lecturer?.name || ""}
                             </span>
                           </div>

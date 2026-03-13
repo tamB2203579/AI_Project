@@ -1211,6 +1211,14 @@ select.input {
   font-weight: 500;
 }
 
+.cell-content.spanning .cell-lecturer {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.7);
+  display: block;
+  font-style: normal;
+  font-weight: 500;
+}
+
 /* Legend */
 .legend {
   margin-bottom: 24px;

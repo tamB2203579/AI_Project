@@ -154,7 +154,7 @@ export function TimetableGrid() {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 
     setPopup({
-      courseName: course?.name || `Course ${gene.courseId}`,
+      courseName: course ? `${course.courseCode} – ${course.name}` : `Course ${gene.courseId}`,
       roomName: room?.name || `Room ${gene.roomId}`,
       lecturerName: lecturer?.name || `Lecturer ${gene.lecturerId}`,
       timeRange: `${startTime} – ${endTime}`,
@@ -275,13 +275,13 @@ export function TimetableGrid() {
                             onClick={(e) => handleCardClick(gene, e)}
                           >
                             <span className="cell-name">
-                              {course?.name || ""}
+                              {course ? `${course.courseCode} – ${course.name}` : `Môn ${gene.courseId}`}
                             </span>
                             <span className="cell-room">
-                              {room?.name || ""}
+                              {room?.name || `Phòng ${gene.roomId}`}
                             </span>
                             <span className="cell-lecturer">
-                              {lecturer?.name || ""}
+                              {lecturer?.name || `GV ${gene.lecturerId}`}
                             </span>
                           </div>
                         </td>

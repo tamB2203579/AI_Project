@@ -44,7 +44,7 @@ class GAScheduler:
             courses=list(self.courses_dict.values()),
             lecturers=list(self.lecturers_dict.values()),
             rooms=list(self.rooms_dict.values()),
-            timeslots=list(self.timeslots_dict.values())
+            timeslots=list(self.timeslots_dict.values()),
         )
 
     def evaluate(self, pop: List[Chromosome]):

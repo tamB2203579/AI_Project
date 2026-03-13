@@ -1,6 +1,6 @@
 import random
 
-def random_reassignment_mutation(gene, lecturers, rooms, timeslots):
+def random_reassignment_mutation(gene, lecturers, rooms, timeslots, courses_dict=None):
     # Only mutate timeslot or room — lecturer is fixed per course
     mutate_type = random.choice(["timeslot", "room"])
     
@@ -16,6 +16,10 @@ def random_reassignment_mutation(gene, lecturers, rooms, timeslots):
             
     elif mutate_type == "room":
         valid_rooms = [r for r in rooms if r.id != gene.room_id]
+        if courses_dict:
+            course = courses_dict[gene.course_id]
+            valid_rooms = [r for r in valid_rooms if r.capacity >= course.studentsCount]
+            
         if valid_rooms:
             gene.room_id = random.choice(valid_rooms).id
 
@@ -114,7 +118,7 @@ def heuristic_mutation(chromosome, lecturers, rooms, timeslots, courses_dict, le
         
         for gene in target_genes:
             # Dùng random_reassignment để ép gene này nhảy sang vị trí/phòng khác
-            random_reassignment_mutation(gene, lecturers, rooms, timeslots)
+            random_reassignment_mutation(gene, lecturers, rooms, timeslots, courses_dict)
             mutations_done += 1
             
     return mutations_done
@@ -140,10 +144,11 @@ def mutate_population(population, lecturers, rooms, timeslots, method="random", 
                     kwargs.get("timeslots_dict")
                 )
         else:
+            courses_dict = kwargs.get("courses_dict")
             for gene in chromosome.genes:
                 if random.random() < mutation_rate:
                     if method == "random":
-                        random_reassignment_mutation(gene, lecturers, rooms, timeslots)
+                        random_reassignment_mutation(gene, lecturers, rooms, timeslots, courses_dict)
                     elif method == "creep":
                         creep_mutation(gene, timeslots)
     return population

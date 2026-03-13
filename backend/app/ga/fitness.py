@@ -62,7 +62,11 @@ def evaluate_all_constraints(
         # === 2. ĐÁNH GIÁ CƠ SỞ VẬT CHẤT (HARD) === #
         if room.type not in course.roomType:
             hard_counts["room_suitability_violations"] += 1
-            hard_details.append(f"Loại phòng: Môn {course.id} cần {course.roomType}, xếp vào P.{room.id} ({room.type})")
+            hard_details.append(f"Loại phòng: Môn {course.name} cần {course.roomType}, xếp vào P.{room.id} ({room.type})")
+        
+        if room.capacity < course.studentsCount:
+            hard_counts["room_suitability_violations"] += 1
+            hard_details.append(f"Sức chứa: Môn {course.name} ({course.studentsCount} sv), xếp vào P.{room.name} (chứa {room.capacity})")
 
         # === 3. TRÙNG LẶP MÔN TRONG NGÀY (HARD) === #
         if course.id not in course_days:
@@ -77,11 +81,6 @@ def evaluate_all_constraints(
         # === 3. SỞ THÍCH VÀ SỨC CHỨA (SOFT) === #
         if day in lecturer.preferenceDay:
             soft_scores["preference_score"] += 1
-
-        if room.capacity < course.studentsCount:
-            soft_scores["capacity_score"] -= 1
-        else:
-            soft_scores["capacity_score"] += 1
 
         # === 4. TRÙNG LẶP SỬ DỤNG BITMASK (HARD) === #
         # Hàm sinh ra chuỗi nhị phân (vd: Start=2, Length=2 -> 0b0000000110)
@@ -190,7 +189,7 @@ def penalty_fitness(
     rooms_dict: dict[int, Room],
     timeslots_dict: dict[int, TimeSlot],
     base_score: int = 1000,
-    hard_penalty: int = 50,
+    hard_penalty: int = 100,
     soft_bonus: int = 5,
 ):
     """
@@ -198,7 +197,7 @@ def penalty_fitness(
 
     Phương pháp:
     - Lấy quỹ điểm chuẩn là 1000.
-    - Mỗi vi phạm nghiêm trọng (Hard Constraint) làm trừ đi 50 điểm.
+    - Mỗi vi phạm nghiêm trọng (Hard Constraint) làm trừ đi 100 điểm.
     - Mỗi một nấc đánh giá đạt của Soft Constraint sẽ cộng thêm 5 điểm bù.
     """
     hard_counts, _, soft_scores, _ = evaluate_all_constraints(
@@ -268,24 +267,22 @@ def weighted_fitness(
         chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
     )
 
-    # TRỌNG SỐ CHO HARD CONSTRAINTS (Tổng: 0.55)
+    # TRỌNG SỐ CHO HARD CONSTRAINTS (Tổng: 0.5)
     w_overlap = 0.35  # 35% cho Trùng lịch (Nghiêm trọng nhất)
-    w_time = 0.20  # 20% cho Sai khung giờ
+    w_time = 0.05  # 5% cho Sai khung giờ
+    w_room_suitability = 0.10
     
-    # Ở đây do room.capacity bị gỡ khỏi hard constraints nên ta chỉ đo lại room type vi phạm
-    score_room = 1.0 / (1.0 + hard_counts["room_suitability_violations"]) 
-
-    # TRỌNG SỐ CHO SOFT CONSTRAINTS (Tổng: 0.45)
-    w_pref = 0.10  # 10% Sở thích ưu tiên
-    w_workload = 0.08  # 8% Khối lượng làm việc liên tục
-    w_idle = 0.07  # 7% Thời gian rảnh rỗi chờ ca dạy
+    # TRỌNG SỐ CHO SOFT CONSTRAINTS (Tổng: 0.50)
+    w_pref = 0.20  # 20% Sở thích ưu tiên
+    w_workload = 0.15  # 15% Khối lượng làm việc liên tục
+    w_idle = 0.10  # 10% Thời gian rảnh rỗi chờ ca dạy
     w_move = 0.05  # 5% Đổi phòng
-    w_capacity = 0.15  # 15% cho Sức chứa phòng (Capacity)
 
     # CHUẨN HOÁ HARD-CONSTRAINTS VỀ THANG (0 -> 1.0]
     # Bản chất: Lỗi càng nhiều (Mẫu số to) thì Giá trị đem nhân Weight càng tụt mất (Gần về 0)
     score_overlap = 1.0 / (1.0 + hard_counts["overlap_violations"])
     score_time = 1.0 / (1.0 + hard_counts["time_violations"])
+    score_room_suitability = 1.0 / (1.0 + hard_counts["room_suitability_violations"])
 
     # CHUẨN HOÁ SOFT-CONSTRAINTS VỀ THANG (0.0 -> 1.0)
     # Vì Soft Score là dạng tổng điểm (+) / phạt trừ biên độ (-), khó kiểm soát cận độ giới hạn.
@@ -307,12 +304,11 @@ def weighted_fitness(
     chromosome.fitness = (
         (w_overlap * score_overlap)
         + (w_time * score_time)
-        + (0 * score_room) # Ignore score room if it's 0 (removed capacity from hard constraint sum) 
+        + (w_room_suitability * score_room_suitability)
         + (w_pref * s_pref)
         + (w_workload * s_workload)
         + (w_idle * s_idle)
         + (w_move * s_move)
-        + (w_capacity * s_capacity)
     )
     return chromosome.fitness
 

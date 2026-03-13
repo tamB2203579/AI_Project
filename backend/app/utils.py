@@ -23,11 +23,11 @@ def format_genes(chromosome):
     return [
         {
             "session": g.session_id,
-            "course": g.course_id,
+            "courseId": g.course_id,
             "units": g.units,
-            "lecturer": g.lecturer_id,
-            "room": g.room_id,
-            "timeslot": g.timeslot_id
+            "lecturerId": g.lecturer_id,
+            "roomId": g.room_id,
+            "timeslotId": g.timeslot_id
         }
         for g in chromosome.genes
     ]

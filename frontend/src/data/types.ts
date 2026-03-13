@@ -10,6 +10,7 @@ export interface Lecturer {
 
 export interface Course {
     id: number;
+    courseCode: string;
     name: string;
     unitsPerWeek: number;
     studentsCount: number;

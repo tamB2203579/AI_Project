@@ -172,6 +172,7 @@ function LecturersTab() {
 function CoursesTab() {
   const { state, dispatch } = useAppState();
   const [showForm, setShowForm] = useState(false);
+  const [courseCode, setCourseCode] = useState("");
   const [name, setName] = useState("");
   const [unitsPerWeek, setUnitsPerWeek] = useState(9);
   const [maxUnitsPerDay, setMaxUnitsPerDay] = useState(3);
@@ -183,10 +184,11 @@ function CoursesTab() {
   const [roomTypes, setRoomTypes] = useState<string[]>(["Lecture"]);
 
   const handleAdd = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !courseCode.trim()) return;
 
     const newCourse: Course = {
       id: Date.now(),
+      courseCode: courseCode.trim(),
       name: name.trim(),
       unitsPerWeek,
       studentsCount: students,
@@ -198,6 +200,7 @@ function CoursesTab() {
     try {
       const res = await courseApi.create(newCourse);
       dispatch({ type: "ADD_COURSE", payload: res.data });
+      setCourseCode("");
       setName("");
       setUnitsPerWeek(9);
       setStudents(40);
@@ -233,15 +236,27 @@ function CoursesTab() {
 
       {showForm && (
         <div className="form-card">
-          <div className="form-group">
-            <label>Course Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Data Structures"
-              className="input"
-            />
+          <div className="form-row">
+            <div className="form-group">
+              <label>Course Code</label>
+              <input
+                type="text"
+                value={courseCode}
+                onChange={(e) => setCourseCode(e.target.value)}
+                placeholder="e.g. CT175"
+                className="input"
+              />
+            </div>
+            <div className="form-group">
+              <label>Course Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Cấu trúc dữ liệu"
+                className="input"
+              />
+            </div>
           </div>
           <div className="form-row">
             <div className="form-group">
@@ -318,7 +333,7 @@ function CoursesTab() {
           <div key={course.id} className="item-card">
             <div className="item-color" style={{ backgroundColor: "#666" }}></div>
             <div className="item-info">
-              <span className="item-name">{course.name}</span>
+              <span className="item-name">{course.courseCode} – {course.name}</span>
               <span className="item-detail">
                 {getLecturerName(course.lecturerId)} · {course.unitsPerWeek}{" "}
                 units/wk · {course.maxUnitsPerDay}p/session ·{" "}

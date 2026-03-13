@@ -17,6 +17,7 @@ def evaluate_all_constraints(
         "overlap_violations": 0,
         "time_violations": 0,
         "room_suitability_violations": 0,
+        "daily_limit_violations": 0,
     }
     soft_scores = {
         "preference_score": 0,
@@ -35,6 +36,9 @@ def evaluate_all_constraints(
 
     # Để suy luận Workload/Movement, chúng ta phải nhóm lại theo GV
     lecturer_schedule_blocks = {}
+    
+    # Track days each course is scheduled to prevent multiple sessions per day
+    course_days = {}
 
     for gene in chromosome.genes:
         course = courses_dict[gene.course_id]
@@ -59,6 +63,16 @@ def evaluate_all_constraints(
         if room.type not in course.roomType:
             hard_counts["room_suitability_violations"] += 1
             hard_details.append(f"Loại phòng: Môn {course.id} cần {course.roomType}, xếp vào P.{room.id} ({room.type})")
+
+        # === 3. TRÙNG LẶP MÔN TRONG NGÀY (HARD) === #
+        if course.id not in course_days:
+            course_days[course.id] = set()
+            
+        if day in course_days[course.id]:
+            hard_counts["daily_limit_violations"] += 1
+            hard_details.append(f"Giới hạn ngày: Môn {course.id} có nhiều hơn 1 buổi trên Ngày {day}")
+            
+        course_days[course.id].add(day)
 
         # === 3. SỞ THÍCH VÀ SỨC CHỨA (SOFT) === #
         if day in lecturer.preferenceDay:

@@ -1,63 +1,60 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable react-hooks/preserve-manual-memoization */
-import { useRef, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useAppState } from "../data/store";
-import type {
-  SelectionMethod,
-  CrossoverMethod,
-  MutationMethod,
-  FitnessMethod,
-} from "../data/types";
 import { scheduleApi } from "../api/scheduleApi";
+import type { ScheduleRequest } from "../data/types";
+
+const defaultConfig: ScheduleRequest = {
+  fitness: {
+    method: "weighted",
+    base_score: 1000,
+    hard_penalty: 50,
+    soft_bonus: 5,
+    alpha: 1000,
+    beta: 10,
+  },
+  selection: {
+    method: "tournament",
+    tournament_k: 3,
+  },
+  crossover: {
+    method: "single_point",
+    rate: 0.8,
+    n_points: 3,
+  },
+  mutation: {
+    method: "random",
+    rate: 0.05,
+  },
+  ga: {
+    pop_size: 100,
+    elitism_rate: 0.1,
+    max_generations: 500,
+    max_time_seconds: 60,
+    max_stall_generations: 50,
+    target_fitness: null,
+  },
+};
 
 export function GAControls() {
   const { state, dispatch } = useAppState();
   const stopRef = useRef(false);
+  const [config, setConfig] = useState<ScheduleRequest>(defaultConfig);
 
-  // const handleRun = useCallback(async () => {
-  //   stopRef.current = false;
+  const updateGA = (patch: Partial<ScheduleRequest["ga"]>) =>
+    setConfig((c) => ({ ...c, ga: { ...c.ga, ...patch } }));
 
-  //   dispatch({ type: "SET_GA_STATUS", payload: "running" });
-  //   dispatch({ type: "SET_CURRENT_GENERATION", payload: 0 });
+  const updateSelection = (patch: Partial<ScheduleRequest["selection"]>) =>
+    setConfig((c) => ({ ...c, selection: { ...c.selection, ...patch } }));
 
-  //   let fitness = 200;
+  const updateCrossover = (patch: Partial<ScheduleRequest["crossover"]>) =>
+    setConfig((c) => ({ ...c, crossover: { ...c.crossover, ...patch } }));
 
-  //   for (let gen = 1; gen <= state.gaConfig.maxGenerations; gen++) {
-  //     if (stopRef.current) break;
+  const updateMutation = (patch: Partial<ScheduleRequest["mutation"]>) =>
+    setConfig((c) => ({ ...c, mutation: { ...c.mutation, ...patch } }));
 
-  //     await new Promise((r) => setTimeout(r, 20));
-
-  //     fitness += Math.random() * 10;
-
-  //     dispatch({ type: "SET_CURRENT_GENERATION", payload: gen });
-  //     dispatch({ type: "SET_BEST_FITNESS", payload: fitness });
-
-  //     if (gen % 50 === 0) {
-  //       const newTimetable = state.courses.map((course) => {
-  //         const randomRoom =
-  //           state.rooms[Math.floor(Math.random() * state.rooms.length)];
-
-  //         const randomSlot =
-  //           state.timeslots[Math.floor(Math.random() * state.timeslots.length)];
-
-  //         return {
-  //           courseId: course.id,
-  //           lecturerId: course.lecturerId,
-  //           roomId: randomRoom?.id ?? 1,
-  //           timeslotId: randomSlot?.id ?? 1,
-  //         };
-  //       });
-
-  //       dispatch({
-  //         type: "SET_TIMETABLE",
-  //         payload: newTimetable,
-  //       });
-  //     }
-  //   }
-
-  //   dispatch({ type: "SET_GA_STATUS", payload: "completed" });
-  // }, [state.gaConfig.maxGenerations, dispatch]);
+  const updateFitness = (patch: Partial<ScheduleRequest["fitness"]>) =>
+    setConfig((c) => ({ ...c, fitness: { ...c.fitness, ...patch } }));
 
   const handleRun = useCallback(async () => {
     stopRef.current = false;
@@ -66,17 +63,7 @@ export function GAControls() {
       dispatch({ type: "SET_GA_STATUS", payload: "running" });
       dispatch({ type: "SET_CURRENT_GENERATION", payload: 0 });
 
-      const payload = {
-        courses: state.courses,
-        lecturers: state.lecturers,
-        rooms: state.rooms,
-        timeslots: state.timeslots,
-        config: state.gaConfig,
-      };
-
-      const res = await scheduleApi.generate(payload);
-      // console.log(res);
-
+      const res = await scheduleApi.generate(config);
       const result = res.data;
 
       const timetable = result.schedule.map((s: any) => ({
@@ -87,19 +74,14 @@ export function GAControls() {
         units: s.units,
       }));
 
-      // dispatch({
-      //   type: "SET_TIMETABLE",
-      //   payload: result.bestChromosome,
-      // });
-
-      dispatch({
-        type: "SET_TIMETABLE",
-        payload: timetable,
-      });
+      dispatch({ type: "SET_TIMETABLE", payload: timetable });
 
       dispatch({
         type: "SET_BEST_FITNESS",
-        payload: result.bestFitness,
+        payload:
+          typeof result.best_fitness === "object"
+            ? result.best_fitness?.hard_score ?? 0
+            : result.best_fitness ?? 0,
       });
 
       dispatch({
@@ -107,19 +89,22 @@ export function GAControls() {
         payload: result.generations,
       });
 
+      dispatch({
+        type: "SET_HARD_CONSTRAINTS",
+        payload: result.hard_constraints ?? [],
+      });
+
+      dispatch({
+        type: "SET_SOFT_CONSTRAINTS",
+        payload: result.soft_constraints ?? [],
+      });
+
       dispatch({ type: "SET_GA_STATUS", payload: "completed" });
     } catch (err) {
       console.error("GA run error:", err);
       dispatch({ type: "SET_GA_STATUS", payload: "idle" });
     }
-  }, [
-    state.courses,
-    state.lecturers,
-    state.rooms,
-    state.timeslots,
-    state.gaConfig,
-    dispatch,
-  ]);
+  }, [dispatch, config]);
 
   const handleStop = () => {
     stopRef.current = true;
@@ -128,6 +113,7 @@ export function GAControls() {
   const handleReset = () => {
     stopRef.current = true;
     dispatch({ type: "RESET_GA" });
+    setConfig(defaultConfig);
   };
 
   const disabled = state.gaStatus === "running";
@@ -137,162 +123,132 @@ export function GAControls() {
       <div className="page-header">
         <h2 className="page-title">GA Scheduler</h2>
         <p className="page-description">
-          Configure genetic algorithm parameters
+          Configure genetic algorithm parameters and generate a timetable
         </p>
       </div>
 
       <div className="ga-layout">
         <div className="ga-params">
-          {/* POPULATION */}
 
+          {/* POPULATION */}
           <h3 className="section-title">Population</h3>
 
           <div className="param-group">
             <label className="param-label">
               Population Size
-              <span className="param-value">
-                {state.gaConfig.populationSize}
-              </span>
+              <span className="param-value">{config.ga.pop_size}</span>
             </label>
-
             <input
-              type="range"
-              min={10}
-              max={200}
-              value={state.gaConfig.populationSize}
-              disabled={disabled}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_GA_CONFIG",
-                  payload: { populationSize: Number(e.target.value) },
-                })
-              }
+              type="range" min={10} max={500} step={10}
+              value={config.ga.pop_size} disabled={disabled}
+              onChange={(e) => updateGA({ pop_size: Number(e.target.value) })}
             />
           </div>
 
           <div className="param-group">
             <label className="param-label">
               Max Generations
-              <span className="param-value">
-                {state.gaConfig.maxGenerations}
-              </span>
+              <span className="param-value">{config.ga.max_generations}</span>
             </label>
-
             <input
-              type="range"
-              min={50}
-              max={2000}
-              step={50}
-              value={state.gaConfig.maxGenerations}
-              disabled={disabled}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_GA_CONFIG",
-                  payload: { maxGenerations: Number(e.target.value) },
-                })
-              }
+              type="range" min={50} max={5000} step={50}
+              value={config.ga.max_generations} disabled={disabled}
+              onChange={(e) => updateGA({ max_generations: Number(e.target.value) })}
+            />
+          </div>
+
+          <div className="param-group">
+            <label className="param-label">
+              Max Time (seconds)
+              <span className="param-value">{config.ga.max_time_seconds}s</span>
+            </label>
+            <input
+              type="range" min={10} max={300} step={10}
+              value={config.ga.max_time_seconds} disabled={disabled}
+              onChange={(e) => updateGA({ max_time_seconds: Number(e.target.value) })}
+            />
+          </div>
+
+          <div className="param-group">
+            <label className="param-label">
+              Stall Generations
+              <span className="param-value">{config.ga.max_stall_generations}</span>
+            </label>
+            <input
+              type="range" min={10} max={200} step={10}
+              value={config.ga.max_stall_generations} disabled={disabled}
+              onChange={(e) => updateGA({ max_stall_generations: Number(e.target.value) })}
+            />
+          </div>
+
+          <div className="param-group">
+            <label className="param-label">
+              Elitism Rate
+              <span className="param-value">{config.ga.elitism_rate.toFixed(2)}</span>
+            </label>
+            <input
+              type="range" min={0} max={0.5} step={0.05}
+              value={config.ga.elitism_rate} disabled={disabled}
+              onChange={(e) => updateGA({ elitism_rate: Number(e.target.value) })}
             />
           </div>
 
           {/* SELECTION */}
-
           <h3 className="section-title">Selection</h3>
 
           <div className="param-group">
             <label className="param-label">Selection Method</label>
-
             <select
-              value={state.gaConfig.selectionMethod}
-              disabled={disabled}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_GA_CONFIG",
-                  payload: {
-                    selectionMethod: e.target.value as SelectionMethod,
-                  },
-                })
-              }
+              value={config.selection.method} disabled={disabled}
+              onChange={(e) => updateSelection({ method: e.target.value })}
             >
               <option value="tournament">Tournament</option>
               <option value="roulette">Roulette</option>
               <option value="rank">Rank</option>
+              <option value="elimination">Elimination</option>
             </select>
           </div>
 
-          {state.gaConfig.selectionMethod === "tournament" && (
+          {config.selection.method === "tournament" && (
             <div className="param-group">
               <label className="param-label">
                 Tournament K
-                <span className="param-value">
-                  {state.gaConfig.tournamentK}
-                </span>
+                <span className="param-value">{config.selection.tournament_k}</span>
               </label>
-
               <input
-                type="range"
-                min={1}
-                max={10}
-                step={1}
-                value={state.gaConfig.tournamentK}
-                disabled={disabled}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_GA_CONFIG",
-                    payload: { tournamentK: Number(e.target.value) },
-                  })
-                }
+                type="range" min={2} max={10} step={1}
+                value={config.selection.tournament_k} disabled={disabled}
+                onChange={(e) => updateSelection({ tournament_k: Number(e.target.value) })}
               />
             </div>
           )}
 
           {/* CROSSOVER */}
-
           <h3 className="section-title">Crossover</h3>
 
           <div className="param-group">
             <label className="param-label">Crossover Method</label>
-
             <select
-              value={state.gaConfig.crossoverMethod}
-              disabled={disabled}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_GA_CONFIG",
-                  payload: {
-                    crossoverMethod: e.target.value as CrossoverMethod,
-                  },
-                })
-              }
+              value={config.crossover.method} disabled={disabled}
+              onChange={(e) => updateCrossover({ method: e.target.value })}
             >
-              <option value="single">Single Point</option>
-              <option value="two">Two Point</option>
-              <option value="multipoint">Multipoint</option>
+              <option value="single_point">Single Point</option>
+              <option value="two_point">Two Point</option>
+              <option value="multi_point">Multi Point</option>
               <option value="uniform">Uniform</option>
             </select>
           </div>
 
-          {state.gaConfig.crossoverMethod === "multipoint" && (
+          {config.crossover.method === "multi_point" && (
             <div className="param-group">
               <label className="param-label">
-                Multipoint N
-                <span className="param-value">
-                  {state.gaConfig.multipointN}
-                </span>
+                Number of Points
+                <span className="param-value">{config.crossover.n_points}</span>
               </label>
-
               <input
-                type="range"
-                min={1}
-                max={5}
-                step={1}
-                value={state.gaConfig.multipointN}
-                disabled={disabled}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_GA_CONFIG",
-                    payload: { multipointN: Number(e.target.value) },
-                  })
-                }
+                type="range" min={1} max={10} step={1}
+                value={config.crossover.n_points} disabled={disabled}
+                onChange={(e) => updateCrossover({ n_points: Number(e.target.value) })}
               />
             </div>
           )}
@@ -300,209 +256,104 @@ export function GAControls() {
           <div className="param-group">
             <label className="param-label">
               Crossover Rate
-              <span className="param-value">
-                {state.gaConfig.crossoverRate.toFixed(1)}
-              </span>
+              <span className="param-value">{config.crossover.rate.toFixed(2)}</span>
             </label>
-
             <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.1}
-              value={state.gaConfig.crossoverRate}
-              disabled={disabled}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_GA_CONFIG",
-                  payload: { crossoverRate: Number(e.target.value) },
-                })
-              }
+              type="range" min={0} max={1} step={0.05}
+              value={config.crossover.rate} disabled={disabled}
+              onChange={(e) => updateCrossover({ rate: Number(e.target.value) })}
             />
           </div>
 
           {/* MUTATION */}
-
           <h3 className="section-title">Mutation</h3>
 
           <div className="param-group">
             <label className="param-label">Mutation Method</label>
-
             <select
-              value={state.gaConfig.mutationMethod}
-              disabled={disabled}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_GA_CONFIG",
-                  payload: { mutationMethod: e.target.value as MutationMethod },
-                })
-              }
+              value={config.mutation.method} disabled={disabled}
+              onChange={(e) => updateMutation({ method: e.target.value })}
             >
-              <option value="swap">Swap</option>
-              <option value="scramble">Scramble</option>
               <option value="random">Random</option>
+              <option value="swap">Swap</option>
+              <option value="creep">Creep</option>
             </select>
           </div>
 
           <div className="param-group">
             <label className="param-label">
               Mutation Rate
-              <span className="param-value">
-                {(state.gaConfig.mutationRate ?? 0).toFixed(1)}
-              </span>
+              <span className="param-value">{config.mutation.rate.toFixed(2)}</span>
             </label>
-
             <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.1}
-              value={state.gaConfig.mutationRate}
-              disabled={disabled}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_GA_CONFIG",
-                  payload: { mutationRate: Number(e.target.value) },
-                })
-              }
-            />
-          </div>
-
-          {/* ELITISM */}
-
-          <h3 className="section-title">Elitism</h3>
-
-          <div className="param-group">
-            <label className="param-label">
-              Elitism Rate
-              <span className="param-value">
-                {(state.gaConfig.elitismRate ?? 0).toFixed(2)}
-              </span>
-            </label>
-
-            <input
-              type="range"
-              min={0}
-              max={0.5}
-              step={0.05}
-              value={state.gaConfig.elitismRate}
-              disabled={disabled}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_GA_CONFIG",
-                  payload: { elitismRate: Number(e.target.value) },
-                })
-              }
+              type="range" min={0} max={1} step={0.01}
+              value={config.mutation.rate} disabled={disabled}
+              onChange={(e) => updateMutation({ rate: Number(e.target.value) })}
             />
           </div>
 
           {/* FITNESS */}
-
           <h3 className="section-title">Fitness</h3>
 
           <div className="param-group">
             <label className="param-label">Fitness Method</label>
-
             <select
-              value={state.gaConfig.fitnessMethod}
-              disabled={disabled}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_GA_CONFIG",
-                  payload: { fitnessMethod: e.target.value as FitnessMethod },
-                })
-              }
+              value={config.fitness.method} disabled={disabled}
+              onChange={(e) => updateFitness({ method: e.target.value })}
             >
-              <option value="alpha-beta">Alpha Beta</option>
+              <option value="alpha_beta">Alpha Beta</option>
               <option value="penalty">Penalty</option>
+              <option value="weighted">Weighted</option>
+              <option value="lexicographic">Lexicographic</option>
             </select>
           </div>
 
-          {state.gaConfig.fitnessMethod === "alpha-beta" && (
+          {config.fitness.method === "alpha_beta" && (
             <>
               <div className="param-group">
                 <label className="param-label">Alpha</label>
                 <input
-                  type="number"
-                  value={state.gaConfig.alpha}
-                  disabled={disabled}
-                  onChange={(e) =>
-                    dispatch({
-                      type: "SET_GA_CONFIG",
-                      payload: { alpha: Number(e.target.value) },
-                    })
-                  }
+                  type="number" value={config.fitness.alpha} disabled={disabled}
+                  onChange={(e) => updateFitness({ alpha: Number(e.target.value) })}
                 />
               </div>
-
               <div className="param-group">
                 <label className="param-label">Beta</label>
                 <input
-                  type="number"
-                  value={state.gaConfig.beta}
-                  disabled={disabled}
-                  onChange={(e) =>
-                    dispatch({
-                      type: "SET_GA_CONFIG",
-                      payload: { beta: Number(e.target.value) },
-                    })
-                  }
+                  type="number" value={config.fitness.beta} disabled={disabled}
+                  onChange={(e) => updateFitness({ beta: Number(e.target.value) })}
                 />
               </div>
             </>
           )}
 
-          {state.gaConfig.fitnessMethod === "penalty" && (
+          {config.fitness.method === "penalty" && (
             <>
               <div className="param-group">
                 <label className="param-label">Base Score</label>
                 <input
-                  type="number"
-                  value={state.gaConfig.baseScore}
-                  disabled={disabled}
-                  onChange={(e) =>
-                    dispatch({
-                      type: "SET_GA_CONFIG",
-                      payload: { baseScore: Number(e.target.value) },
-                    })
-                  }
+                  type="number" value={config.fitness.base_score} disabled={disabled}
+                  onChange={(e) => updateFitness({ base_score: Number(e.target.value) })}
                 />
               </div>
-
               <div className="param-group">
                 <label className="param-label">Hard Penalty</label>
                 <input
-                  type="number"
-                  value={state.gaConfig.hardPenalty}
-                  disabled={disabled}
-                  onChange={(e) =>
-                    dispatch({
-                      type: "SET_GA_CONFIG",
-                      payload: { hardPenalty: Number(e.target.value) },
-                    })
-                  }
+                  type="number" value={config.fitness.hard_penalty} disabled={disabled}
+                  onChange={(e) => updateFitness({ hard_penalty: Number(e.target.value) })}
                 />
               </div>
-
               <div className="param-group">
-                <label className="param-label">Soft Reward</label>
+                <label className="param-label">Soft Bonus</label>
                 <input
-                  type="number"
-                  value={state.gaConfig.softReward}
-                  disabled={disabled}
-                  onChange={(e) =>
-                    dispatch({
-                      type: "SET_GA_CONFIG",
-                      payload: { softReward: Number(e.target.value) },
-                    })
-                  }
+                  type="number" value={config.fitness.soft_bonus} disabled={disabled}
+                  onChange={(e) => updateFitness({ soft_bonus: Number(e.target.value) })}
                 />
               </div>
             </>
           )}
 
           {/* CONTROLS */}
-
           <div className="control-buttons">
             {state.gaStatus !== "running" && (
               <button className="btn-run" onClick={handleRun}>
@@ -520,6 +371,15 @@ export function GAControls() {
               🔄 Reset
             </button>
           </div>
+
+          {/* STATUS */}
+          {state.gaStatus === "completed" && (
+            <div className="param-group" style={{ marginTop: "12px" }}>
+              <span className="param-label">
+                ✅ Completed · Fitness: <strong>{state.bestFitness}</strong> · Generation: <strong>{state.currentGeneration}</strong>
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

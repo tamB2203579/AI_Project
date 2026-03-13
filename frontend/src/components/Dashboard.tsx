@@ -62,16 +62,11 @@ export function Dashboard() {
                     </div>
                     <div className="step-card">
                         <div className="step-number">2</div>
-                        <h4>Configure GA</h4>
-                        <p>Set population size, mutation rate, and other genetic algorithm parameters.</p>
+                        <h4>Generate</h4>
+                        <p>Run the backend algorithm to optimize and generate a conflict-free timetable.</p>
                     </div>
                     <div className="step-card">
                         <div className="step-number">3</div>
-                        <h4>Generate</h4>
-                        <p>Run the genetic algorithm to evolve an optimal, conflict-free timetable.</p>
-                    </div>
-                    <div className="step-card">
-                        <div className="step-number">4</div>
                         <h4>Review</h4>
                         <p>View the optimized timetable grid with color-coded courses and conflict reports.</p>
                     </div>

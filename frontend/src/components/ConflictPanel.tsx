@@ -1,83 +1,90 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-// Conflict Panel: displays residual constraint violations
+// Conflict Panel: displays constraint violations from the backend GA result
 import { useAppState } from '../data/store';
-
-// fake fitness evaluation
-function evaluateFitness() {
-    return {
-        score: 1000,
-        penalties: {
-            lecturerClash: 0,
-            roomClash: 0,
-            capacityViolation: 0,
-            sessionOverflow: 0,
-            lecturerOverload: 0
-        }
-    };
-}
 
 export function ConflictPanel() {
     const { state } = useAppState();
 
-   if (!state.timetable || state.timetable.length === 0) return null;
+    if (!state.timetable || state.timetable.length === 0) return null;
 
-   //FAKE DATA
-    const result = {
-        score: 1000,
-        penalties: {
-            lecturerClash: 0,
-            roomClash: 0,
-            capacityViolation: 0,
-            sessionOverflow: 0,
-            lecturerOverload: 0
-        }
-    };
+    const hard = state.hardConstraints;
+    const soft = state.softConstraints;
 
-    const { penalties } = result;
-    const hasIssues = Object.values(penalties).some(v => v > 0);
+    const hasHardViolations = hard && hard.total_violations > 0;
+    const hasSoftIssues = soft && Object.values(soft.by_type).some(v => v < 0);
 
-    if (!hasIssues) {
+    if (!hasHardViolations && !hasSoftIssues) {
         return (
             <div className="conflict-panel success">
                 <div className="conflict-header">
                     <span className="conflict-icon">✅</span>
                     <h3>No Conflicts</h3>
                 </div>
-                <p>The generated timetable has no constraint violations. All hard constraints are satisfied.</p>
+                <p>The generated timetable has no constraint violations. All constraints are satisfied.</p>
             </div>
         );
     }
-
-    const items = [
-        { label: 'Lecturer Time Clashes', value: penalties.lecturerClash, severity: 'high' as const, icon: '⚠️', desc: 'A lecturer is scheduled for multiple courses at the same time' },
-        { label: 'Room Time Clashes', value: penalties.roomClash, severity: 'high' as const, icon: '🏫', desc: 'Multiple courses are assigned to the same room at the same time' },
-        { label: 'Capacity Violations', value: penalties.capacityViolation, severity: 'high' as const, icon: '👥', desc: 'Course student count exceeds room capacity' },
-        { label: 'Session Overflow', value: penalties.sessionOverflow, severity: 'high' as const, icon: '🚫', desc: 'Session crosses the morning/afternoon boundary or exceeds available periods' },
-        { label: 'Lecturer Overload', value: penalties.lecturerOverload, severity: 'medium' as const, icon: '⏰', desc: 'Lecturer exceeds their maximum weekly hours' },
-    ];
 
     return (
         <div className="conflict-panel">
             <div className="conflict-header">
                 <span className="conflict-icon">⚡</span>
                 <h3>Constraint Report</h3>
-                <span className="fitness-badge">Fitness: {result.score.toFixed(1)}</span>
+                <span className="fitness-badge">Fitness: {state.bestFitness}</span>
             </div>
-            <div className="conflict-list">
-                {items.filter(i => i.value > 0).map((item, idx) => (
-                    <div key={idx} className={`conflict-item severity-${item.severity}`}>
-                        <span className="conflict-item-icon">{item.icon}</span>
-                        <div className="conflict-item-info">
-                            <span className="conflict-item-label">{item.label}</span>
-                            <span className="conflict-item-desc">{item.desc}</span>
-                        </div>
-                        <span className="conflict-count">{item.value}</span>
+
+            {hasHardViolations && hard && (
+                <>
+                    <h4 style={{ margin: '12px 0 8px', color: '#ef4444' }}>
+                        Hard Constraints ({hard.total_violations} violations)
+                    </h4>
+                    <div className="conflict-list">
+                        {Object.entries(hard.by_type)
+                            .filter(([, count]) => count > 0)
+                            .map(([type, count]) => (
+                                <div key={type} className="conflict-item severity-high">
+                                    <span className="conflict-item-icon">⚠️</span>
+                                    <div className="conflict-item-info">
+                                        <span className="conflict-item-label">
+                                            {type.replace(/_/g, ' ')}
+                                        </span>
+                                    </div>
+                                    <span className="conflict-count">{count}</span>
+                                </div>
+                            ))}
                     </div>
-                ))}
-            </div>
-            <p className="conflict-tip">
-                💡 Try increasing the population size or max generations for better results.
-            </p>
+                    {hard.details.length > 0 && (
+                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#94a3b8' }}>
+                            {hard.details.slice(0, 10).map((d, i) => (
+                                <div key={i}>• {d}</div>
+                            ))}
+                            {hard.details.length > 10 && (
+                                <div>...and {hard.details.length - 10} more</div>
+                            )}
+                        </div>
+                    )}
+                </>
+            )}
+
+            {soft && (
+                <>
+                    <h4 style={{ margin: '12px 0 8px', color: '#f59e0b' }}>
+                        Soft Constraints (score: {soft.total_score})
+                    </h4>
+                    <div className="conflict-list">
+                        {Object.entries(soft.by_type).map(([type, score]) => (
+                            <div key={type} className={`conflict-item ${score >= 0 ? 'severity-low' : 'severity-medium'}`}>
+                                <span className="conflict-item-icon">{score >= 0 ? '✅' : '💡'}</span>
+                                <div className="conflict-item-info">
+                                    <span className="conflict-item-label">
+                                        {type.replace(/_/g, ' ')}
+                                    </span>
+                                </div>
+                                <span className="conflict-count">{score >= 0 ? '+' : ''}{score}</span>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     );
 }

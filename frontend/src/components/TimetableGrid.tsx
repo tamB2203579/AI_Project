@@ -1,18 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-// Timetable Grid with click-to-show detail popup
+// Multi-Room Timetable Grid with day tabs
 import { useState } from "react";
 import { useAppState } from "../data/store";
-import { DAYS, TIME_SLOTS, PERIODS_PER_DAY, PERIOD_TIME } from "../data/types";
+import { DAYS, PERIODS_PER_DAY, PERIOD_TIME } from "../data/types";
 import { ConflictPanel } from "./ConflictPanel";
 import type { Gene } from "../data/types";
 
 interface PopupInfo {
   courseName: string;
-  courseCode: string;
   roomName: string;
   lecturerName: string;
   timeRange: string;
-  lecturerColor: string;
+  units: number;
   x: number;
   y: number;
 }
@@ -20,10 +19,7 @@ interface PopupInfo {
 export function TimetableGrid() {
   const { state } = useAppState();
   const [popup, setPopup] = useState<PopupInfo | null>(null);
-
-  // console.log("COURSES:", state.courses);
-  // console.log("TIMETABLE:", state.timetable);
-  // console.log("TIME Slot:", TIME_SLOTS);
+  const [activeDay, setActiveDay] = useState(0);
 
   if (!state.timetable || state.timetable.length === 0) {
     return (
@@ -46,188 +42,123 @@ export function TimetableGrid() {
     );
   }
 
-  function getGeneSlot(gene: Gene) {
-    const dayIndex = Math.floor((gene.timeslotId - 1) / PERIODS_PER_DAY);
-    const slotIndex = (gene.timeslotId - 1) % PERIODS_PER_DAY;
-
-    return {
-      dayIndex,
-      slotIndex,
-      duration: gene.units, // FIX
-    };
-  }
-
-  // Build lookup maps — timeslotMap uses TIME_SLOTS (now 45 slots, 9/day)
-  const timeslotMap = new Map(TIME_SLOTS.map((t) => [t.id, t]));
+  // Build lookup maps
   const courseMap = new Map(state.courses.map((c) => [c.id, c]));
   const lecturerMap = new Map(state.lecturers.map((l) => [l.id, l]));
   const roomMap = new Map(state.rooms.map((r) => [r.id, r]));
 
-  const conflictCells = new Set<string>();
-  const occupiedSlots = new Map<string, string[]>();
+  // Get sorted room list
+  const rooms = [...state.rooms].sort((a, b) => a.id - b.id);
 
-  for (const gene of state.timetable) {
-    const slot = timeslotMap.get(gene.timeslotId);
-
-    if (!slot) continue;
-
-    const geneSlot = getGeneSlot(gene);
-
-    if (!geneSlot) continue;
-
-    const { dayIndex, slotIndex, duration } = geneSlot;
-
-    for (let s = 0; s < duration; s++) {
-      const slotIdx = slotIndex + s;
-      if (slotIdx >= PERIODS_PER_DAY) continue;
-
-      const occKey = `${slotIdx}-${dayIndex}`;
-
-      if (!occupiedSlots.has(occKey)) {
-        occupiedSlots.set(occKey, []);
-      }
-
-      occupiedSlots.get(occKey)!.push(gene.courseId.toString());
-
-      if (occupiedSlots.get(occKey)!.length > 1) {
-        conflictCells.add(occKey);
-      }
-    }
+  // For each gene, compute day and start period
+  function getGenePosition(gene: Gene) {
+    const dayIndex = Math.floor((gene.timeslotId - 1) / PERIODS_PER_DAY);
+    const slotIndex = (gene.timeslotId - 1) % PERIODS_PER_DAY;
+    return { dayIndex, slotIndex, duration: gene.units };
   }
 
-  type CellState =
+  // Build a grid: grid[roomId][periodIndex] = Gene or null, for the active day
+  type CellInfo =
     | { type: "empty" }
     | { type: "covered" }
     | { type: "start"; gene: Gene; rowSpan: number };
-  const dayTracks: CellState[][][] = [];
 
-  for (let d = 0; d < DAYS.length; d++) {
-    const dayGenes = state.timetable.filter((g) => {
-      const slot = timeslotMap.get(g.timeslotId);
-      return slot?.day === d;
-    });
+  const roomGrids = new Map<number, CellInfo[]>();
 
-    // Sort by start slot, then duration (desc), then courseId to preserve order
-    dayGenes.sort((a, b) => {
-      const sa = getGeneSlot(a);
-      const sb = getGeneSlot(b);
-
-      if (!sa || !sb) return 0;
-
-      if (sa.slotIndex !== sb.slotIndex) return sa.slotIndex - sb.slotIndex;
-
-      if (sb.duration !== sa.duration) return sb.duration - sa.duration;
-
-      return a.courseId - b.courseId;
-    });
-
-    const tracks: CellState[][] = [];
-
-    for (const gene of dayGenes) {
-      const slot = timeslotMap.get(gene.timeslotId);
-      if (!slot) continue;
-
-      let placed = false;
-
-      const slotIndex = slot.start_period - 1;
-      // let actualDuration = slot.duration;
-      let actualDuration = gene.units;
-
-      if (slotIndex + actualDuration > PERIODS_PER_DAY) {
-        actualDuration = PERIODS_PER_DAY - slotIndex;
-      }
-
-      // Find first track where these slots are free
-      for (let t = 0; t < tracks.length; t++) {
-        let free = true;
-
-        for (let i = 0; i < actualDuration; i++) {
-          if (tracks[t][slotIndex + i].type !== "empty") {
-            free = false;
-            break;
-          }
-        }
-
-        if (free) {
-          tracks[t][slotIndex] = {
-            type: "start",
-            gene,
-            rowSpan: actualDuration,
-          };
-
-          for (let i = 1; i < actualDuration; i++) {
-            tracks[t][slotIndex + i] = { type: "covered" };
-          }
-
-          placed = true;
-          break;
-        }
-      }
-
-      if (!placed) {
-        const newTrack: CellState[] = Array(PERIODS_PER_DAY)
-          .fill(null)
-          .map(() => ({ type: "empty" }));
-
-        newTrack[slotIndex] = {
-          type: "start",
-          gene,
-          rowSpan: actualDuration,
-        };
-
-        for (let i = 1; i < actualDuration; i++) {
-          newTrack[slotIndex + i] = { type: "covered" };
-        }
-
-        tracks.push(newTrack);
-      }
-    }
-
-    if (tracks.length === 0) {
-      tracks.push(
-        Array(PERIODS_PER_DAY)
-          .fill(null)
-          .map(() => ({ type: "empty" })),
-      );
-    }
-
-    dayTracks[d] = tracks;
+  for (const room of rooms) {
+    roomGrids.set(
+      room.id,
+      Array.from({ length: PERIODS_PER_DAY }, () => ({ type: "empty" as const }))
+    );
   }
 
-  const getSessionEndTime = (startSlot: number, duration: number) => {
-    const endSlotIdx = Math.min(
-      startSlot + duration - 1,
-      TIME_SLOTS.length - 1,
-    );
+  // Filter genes for the active day and place them
+  const dayGenes = state.timetable.filter((g) => {
+    const pos = getGenePosition(g);
+    return pos.dayIndex === activeDay;
+  });
 
-    return `P${endSlotIdx + 1}`;
-  };
+  // Track conflicts (same room+period or same lecturer+period)
+  const conflictCells = new Set<string>(); // "roomId-period"
+  const lecturerPeriods = new Map<string, string[]>(); // "lecturerId-period" -> courseIds
+
+  for (const gene of dayGenes) {
+    const pos = getGenePosition(gene);
+    const grid = roomGrids.get(gene.roomId);
+    if (!grid) continue;
+
+    let duration = pos.duration;
+    if (pos.slotIndex + duration > PERIODS_PER_DAY) {
+      duration = PERIODS_PER_DAY - pos.slotIndex;
+    }
+
+    // Check room conflict
+    for (let i = 0; i < duration; i++) {
+      const pIdx = pos.slotIndex + i;
+      if (grid[pIdx].type !== "empty") {
+        conflictCells.add(`${gene.roomId}-${pIdx}`);
+      }
+    }
+
+    // Check lecturer conflict
+    for (let i = 0; i < duration; i++) {
+      const pIdx = pos.slotIndex + i;
+      const lecKey = `${gene.lecturerId}-${pIdx}`;
+      if (!lecturerPeriods.has(lecKey)) {
+        lecturerPeriods.set(lecKey, []);
+      }
+      lecturerPeriods.get(lecKey)!.push(`${gene.roomId}-${pIdx}`);
+    }
+
+    // Place the gene
+    if (grid[pos.slotIndex].type === "empty") {
+      grid[pos.slotIndex] = { type: "start", gene, rowSpan: duration };
+      for (let i = 1; i < duration; i++) {
+        if (grid[pos.slotIndex + i].type === "empty") {
+          grid[pos.slotIndex + i] = { type: "covered" };
+        }
+      }
+    }
+  }
+
+  // Mark lecturer conflicts
+  for (const [, cells] of lecturerPeriods) {
+    if (cells.length > 1) {
+      cells.forEach((c) => conflictCells.add(c));
+    }
+  }
+
+  // Color palette for lecturers
+  const lecturerColors = [
+    "#1f5ca9", "#2e7d32", "#c62828", "#6a1b9a",
+    "#e65100", "#00838f", "#4527a0", "#ad1457",
+    "#00695c", "#ef6c00", "#283593", "#558b2f",
+  ];
+
+  function getLecturerColor(lecturerId: number) {
+    return lecturerColors[lecturerId % lecturerColors.length];
+  }
 
   const handleCardClick = (gene: Gene, e: React.MouseEvent) => {
     e.stopPropagation();
-
     const course = courseMap.get(gene.courseId);
     const lecturer = lecturerMap.get(gene.lecturerId);
     const room = roomMap.get(gene.roomId);
-    const slot = timeslotMap.get(gene.timeslotId);
+    const pos = getGenePosition(gene);
 
-    if (!slot) return;
-
-    const startIdx = slot.start_period - 1;
+    const startIdx = pos.slotIndex;
     const endIdx = startIdx + gene.units - 1;
-
-    const startTime = PERIOD_TIME[startIdx]?.start;
-    const endTime = PERIOD_TIME[endIdx]?.end;
+    const startTime = PERIOD_TIME[startIdx]?.start ?? `P${startIdx + 1}`;
+    const endTime = PERIOD_TIME[endIdx]?.end ?? `P${endIdx + 1}`;
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 
     setPopup({
-      courseName: course?.name || "",
-      courseCode: `Course ${gene.courseId}`, // thay vì course.code
-      roomName: room?.name || "",
-      lecturerName: lecturer?.name || "",
-      timeRange: `${startTime} - ${endTime}`,
-      lecturerColor: "#1f5ca9", // màu mặc định
+      courseName: course?.name || `Course ${gene.courseId}`,
+      roomName: room?.name || `Room ${gene.roomId}`,
+      lecturerName: lecturer?.name || `Lecturer ${gene.lecturerId}`,
+      timeRange: `${startTime} – ${endTime}`,
+      units: gene.units,
       x: rect.left + rect.width / 2,
       y: rect.top,
     });
@@ -246,29 +177,39 @@ export function TimetableGrid() {
         </p>
       </div>
 
+      {/* Day Tabs */}
+      <div className="day-tabs">
+        {DAYS.map((day, idx) => (
+          <button
+            key={idx}
+            className={`day-tab ${activeDay === idx ? "active" : ""}`}
+            onClick={(e) => { e.stopPropagation(); setActiveDay(idx); }}
+          >
+            <span className="day-tab-full">{day}</span>
+            <span className="day-tab-short">{day.slice(0, 3)}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="timetable-wrapper">
-        <table className="timetable-table">
+        <table className="timetable-table room-view">
           <colgroup>
             <col style={{ width: "40px" }} />
             <col className="period-col" />
             <col className="time-col" />
-            {DAYS.map((_, d) =>
-              dayTracks[d].map((_, t) => <col key={`col-${d}-${t}`} />),
-            )}
+            {rooms.map((r) => (
+              <col key={r.id} />
+            ))}
           </colgroup>
           <thead>
             <tr>
               <th className="corner-header session-col">Session</th>
               <th className="corner-header period-col">Period</th>
               <th className="corner-header time-col">Time</th>
-              {DAYS.map((day, i) => (
-                <th
-                  key={i}
-                  className="day-header-cell"
-                  colSpan={dayTracks[i].length}
-                >
-                  <span className="day-full">{day}</span>
-                  <span className="day-short">{day.slice(0, 3)}</span>
+              {rooms.map((room) => (
+                <th key={room.id} className="day-header-cell room-header">
+                  <span className="room-header-name">{room.name}</span>
+                  <span className="room-header-cap">{room.capacity} seats</span>
                 </th>
               ))}
             </tr>
@@ -277,6 +218,7 @@ export function TimetableGrid() {
             {Array.from({ length: PERIODS_PER_DAY }).map((_, slotIdx) => {
               const isFirstMorning = slotIdx === 0;
               const isFirstAfternoon = slotIdx === 5;
+              const time = PERIOD_TIME[slotIdx];
 
               return (
                 <tr
@@ -299,69 +241,56 @@ export function TimetableGrid() {
                   </td>
 
                   <td className="time-cell">
-                    <span className="time-range">Period {slotIdx + 1}</span>
+                    <span className="time-range">
+                      {time ? `${time.start}–${time.end}` : `P${slotIdx + 1}`}
+                    </span>
                   </td>
 
-                  {DAYS.map((_, dayIdx) => {
-                    return dayTracks[dayIdx].map((track, trackIdx) => {
-                      const cellState = track[slotIdx];
-                      // const key = `${dayIdx}-${slotIdx}`;
-                      const key = `${slotIdx}-${dayIdx}`;
-                      const hasConflict = conflictCells.has(key);
+                  {rooms.map((room) => {
+                    const grid = roomGrids.get(room.id)!;
+                    const cell = grid[slotIdx];
+                    const cellKey = `${room.id}-${slotIdx}`;
+                    const hasConflict = conflictCells.has(cellKey);
 
-                      if (cellState.type === "covered") return null;
+                    if (cell.type === "covered") return null;
 
-                      if (cellState.type === "start") {
-                        const { gene, rowSpan } = cellState as Extract<
-                          CellState,
-                          { type: "start" }
-                        >;
-                        const course = courseMap.get(gene.courseId);
-                        // console.log(`Course:  ${course}`);
-
-                        const lecturer = lecturerMap.get(gene.lecturerId);
-                        const room = roomMap.get(gene.roomId);
-                        const slot = timeslotMap.get(gene.timeslotId);
-                        if (!slot) return null;
-
-                        const startPeriod = slot.start_period;
-                        const duration = gene.units;
-
-                        const startTime = `Period ${startPeriod}`;
-                        const endTime = `Period ${startPeriod + duration - 1}`;
-
-                        return (
-                          <td
-                            key={`${dayIdx}-${trackIdx}`}
-                            className={`grid-td occupied ${hasConflict ? "conflict" : ""}`}
-                            rowSpan={rowSpan}
-                          >
-                            <div
-                              className="cell-content spanning"
-                              style={{
-                                backgroundColor: "#1f5ca9",
-                                borderColor: "#1f5ca9",
-                              }}
-                              onClick={(e) => handleCardClick(gene, e)}
-                            >
-                              <span className="cell-name">
-                                {course?.name || ""}
-                              </span>
-                              <span className="cell-room">
-                                {room?.name || ""}
-                              </span>
-                            </div>
-                          </td>
-                        );
-                      }
+                    if (cell.type === "start") {
+                      const { gene, rowSpan } = cell;
+                      const course = courseMap.get(gene.courseId);
+                      const lecturer = lecturerMap.get(gene.lecturerId);
+                      const color = getLecturerColor(gene.lecturerId);
 
                       return (
                         <td
-                          key={`${dayIdx}-${trackIdx}`}
-                          className={`grid-td empty ${hasConflict ? "conflict" : ""}`}
-                        ></td>
+                          key={room.id}
+                          className={`grid-td occupied ${hasConflict ? "conflict" : ""}`}
+                          rowSpan={rowSpan}
+                        >
+                          <div
+                            className="cell-content spanning"
+                            style={{
+                              backgroundColor: color,
+                              borderColor: color,
+                            }}
+                            onClick={(e) => handleCardClick(gene, e)}
+                          >
+                            <span className="cell-name">
+                              {course?.name || ""}
+                            </span>
+                            <span className="cell-room">
+                              {lecturer?.name || ""}
+                            </span>
+                          </div>
+                        </td>
                       );
-                    });
+                    }
+
+                    return (
+                      <td
+                        key={room.id}
+                        className={`grid-td empty ${hasConflict ? "conflict" : ""}`}
+                      ></td>
+                    );
                   })}
                 </tr>
               );
@@ -382,58 +311,32 @@ export function TimetableGrid() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="detail-row">
-              <svg
-                className="detail-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={popup.lecturerColor}
-                strokeWidth="2"
-              >
+              <svg className="detail-icon" viewBox="0 0 24 24" fill="none" stroke="#1f5ca9" strokeWidth="2">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
                 <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
               </svg>
-              <span className="detail-text">
-                {popup.courseName} - {popup.courseCode}
-              </span>
+              <span className="detail-text">{popup.courseName}</span>
             </div>
             <div className="detail-row">
-              <svg
-                className="detail-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={popup.lecturerColor}
-                strokeWidth="2"
-              >
+              <svg className="detail-icon" viewBox="0 0 24 24" fill="none" stroke="#1f5ca9" strokeWidth="2">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                 <circle cx="12" cy="10" r="3" />
               </svg>
               <span className="detail-text">{popup.roomName}</span>
             </div>
             <div className="detail-row">
-              <svg
-                className="detail-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={popup.lecturerColor}
-                strokeWidth="2"
-              >
+              <svg className="detail-icon" viewBox="0 0 24 24" fill="none" stroke="#1f5ca9" strokeWidth="2">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
               <span className="detail-text">{popup.lecturerName}</span>
             </div>
             <div className="detail-row">
-              <svg
-                className="detail-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={popup.lecturerColor}
-                strokeWidth="2"
-              >
+              <svg className="detail-icon" viewBox="0 0 24 24" fill="none" stroke="#1f5ca9" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
-              <span className="detail-text">{popup.timeRange}</span>
+              <span className="detail-text">{popup.timeRange} ({popup.units} periods)</span>
             </div>
           </div>
         </div>

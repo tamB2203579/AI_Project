@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import axiosClient from "./axiosClient";
-import type { GAResult } from "../data/types";
+import type { GAResult, ScheduleRequest } from "../data/types";
 
 export const scheduleApi = {
-  generate: (data: any) => {
-    return axiosClient.post<GAResult>("/schedule/", data);
+  generate: (config: ScheduleRequest) => {
+    return axiosClient.post<GAResult>("/schedule/", config);
   },
 };

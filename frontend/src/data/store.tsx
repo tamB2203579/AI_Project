@@ -4,7 +4,6 @@ import {
   createContext,
   useContext,
   useReducer,
-  useEffect,
   type ReactNode,
 } from "react";
 import type {
@@ -12,23 +11,24 @@ import type {
   Course,
   Room,
   Chromosome,
-  GAConfig,
   TimeSlot,
+  HardConstraints,
+  SoftConstraints,
 } from "./types";
-import { mockLecturers, mockCourses, mockRooms } from "./sampleData";
 
 export interface AppState {
   lecturers: Lecturer[];
   courses: Course[];
   rooms: Room[];
   timetable: Chromosome | null;
-  gaConfig: GAConfig;
   gaStatus: "idle" | "running" | "completed";
   fitnessHistory: number[];
   currentGeneration: number;
   bestFitness: number;
   currentPage: string;
   timeslots: TimeSlot[];
+  hardConstraints: HardConstraints | null;
+  softConstraints: SoftConstraints | null;
 }
 
 type Action =
@@ -36,7 +36,6 @@ type Action =
   | { type: "SET_COURSES"; payload: Course[] }
   | { type: "SET_ROOMS"; payload: Room[] }
   | { type: "SET_TIMETABLE"; payload: Chromosome | null }
-  | { type: "SET_GA_CONFIG"; payload: Partial<GAConfig> }
   | { type: "SET_GA_STATUS"; payload: "idle" | "running" | "completed" }
   | { type: "SET_FITNESS_HISTORY"; payload: number[] }
   | { type: "SET_CURRENT_GENERATION"; payload: number }
@@ -50,66 +49,23 @@ type Action =
   | { type: "REMOVE_ROOM"; payload: number }
   | { type: "RESET_GA" }
   | { type: "LOAD_STATE"; payload: Partial<AppState> }
-  | { type: "SET_TIMESLOTS"; payload: TimeSlot[] };
-
-export const defaultGAConfig: GAConfig = {
-  populationSize: 100,
-  maxGenerations: 500,
-
-  selectionMethod: "tournament",
-  tournamentK: 3,
-
-  crossoverMethod: "single",
-  crossoverRate: 0.8,
-  multipointN: 2,
-
-  mutationMethod: "swap",
-  mutationRate: 0.1,
-
-  elitismRate: 0.1,
-
-  fitnessMethod: "alpha-beta",
-
-  alpha: 1000,
-  beta: 10,
-
-  baseScore: 1000,
-  hardPenalty: 50,
-  softReward: 10,
-};
-
-function loadFromStorage(): Partial<AppState> {
-  try {
-    const saved = localStorage.getItem("timetable-app-state");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-        lecturers: parsed.lecturers || mockLecturers,
-        courses: parsed.courses || mockCourses,
-        rooms: parsed.rooms || mockRooms,
-        gaConfig: parsed.gaConfig || defaultGAConfig,
-      };
-    }
-  } catch {
-    /* ignore */
-  }
-  return {};
-}
-
-const savedState = loadFromStorage();
+  | { type: "SET_TIMESLOTS"; payload: TimeSlot[] }
+  | { type: "SET_HARD_CONSTRAINTS"; payload: HardConstraints | null }
+  | { type: "SET_SOFT_CONSTRAINTS"; payload: SoftConstraints | null };
 
 const initialState: AppState = {
-  lecturers: savedState.lecturers || mockLecturers,
-  courses: savedState.courses || mockCourses,
-  rooms: savedState.rooms || mockRooms,
+  lecturers: [],
+  courses: [],
+  rooms: [],
   timetable: null,
-  gaConfig: savedState.gaConfig || defaultGAConfig,
   gaStatus: "idle",
   fitnessHistory: [],
   currentGeneration: 0,
   bestFitness: 0,
   currentPage: "dashboard",
   timeslots: [],
+  hardConstraints: null,
+  softConstraints: null,
 };
 
 function reducer(state: AppState, action: Action): AppState {
@@ -129,12 +85,6 @@ function reducer(state: AppState, action: Action): AppState {
 
     case "SET_TIMETABLE":
       return { ...state, timetable: action.payload };
-
-    case "SET_GA_CONFIG":
-      return {
-        ...state,
-        gaConfig: { ...state.gaConfig, ...action.payload }
-      };
 
     case "SET_GA_STATUS":
       return { ...state, gaStatus: action.payload };
@@ -190,13 +140,20 @@ function reducer(state: AppState, action: Action): AppState {
     case "RESET_GA":
       return {
         ...state,
-        timetable: null,   // ❗ nên là [] thay vì null
+        timetable: null,
         gaStatus: "idle",
         fitnessHistory: [],
         currentGeneration: 0,
         bestFitness: 0,
-        gaConfig: defaultGAConfig
+        hardConstraints: null,
+        softConstraints: null,
       };
+
+    case "SET_HARD_CONSTRAINTS":
+      return { ...state, hardConstraints: action.payload };
+
+    case "SET_SOFT_CONSTRAINTS":
+      return { ...state, softConstraints: action.payload };
 
     case "LOAD_STATE":
       return { ...state, ...action.payload };
@@ -213,17 +170,6 @@ const AppContext = createContext<{
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-
-  // Persist to localStorage on changes
-  useEffect(() => {
-    const toSave = {
-      lecturers: state.lecturers,
-      courses: state.courses,
-      rooms: state.rooms,
-      gaConfig: state.gaConfig,
-    };
-    localStorage.setItem("timetable-app-state", JSON.stringify(toSave));
-  }, [state.lecturers, state.courses, state.rooms, state.gaConfig]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>

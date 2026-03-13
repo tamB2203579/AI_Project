@@ -719,36 +719,6 @@ select.input {
 }
 
 /* ---- GA Controls ---- */
-.control-buttons {
-  grid-column: 1 / -1;
-
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.control-buttons button {
-  padding: 10px 18px;
-  border-radius: 8px;
-  border: none;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.btn-run {
-  background: #22c55e;
-  color: white;
-}
-
-.btn-stop {
-  background: #ef4444;
-  color: white;
-}
-
-.btn-reset {
-  background: #6366f1;
-  color: white;
-}
 
 .param-group {
   display: flex;
@@ -976,7 +946,67 @@ select.input {
   display: block;
 }
 
-/* ---- Timetable Table ---- */
+/* ---- Day Tabs ---- */
+.day-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: fit-content;
+}
+
+.day-tab {
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: var(--transition);
+}
+
+.day-tab:hover {
+  background: var(--bg-glass);
+  color: var(--text-primary);
+}
+
+.day-tab.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.day-tab-short { display: none; }
+
+.room-header {
+  min-width: 120px;
+}
+
+.room-header-name {
+  display: block;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.room-header-cap {
+  display: block;
+  font-weight: 400;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+  .day-tab-full { display: none; }
+  .day-tab-short { display: inline; }
+  .day-tab { padding: 8px 14px; }
+}
 .timetable-wrapper {
   overflow-x: auto;
   margin-bottom: 24px;

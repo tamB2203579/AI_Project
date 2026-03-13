@@ -34,8 +34,11 @@ export interface TimeSlot {
 
 export interface Gene {
     courseId: number;
+    courseName?: string;
     lecturerId: number;
+    lecturerName?: string;
     roomId: number;
+    roomName?: string;
     timeslotId: number;
     units: number;
 }

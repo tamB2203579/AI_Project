@@ -68,8 +68,11 @@ export function GAControls() {
 
       const timetable = result.schedule.map((s: any) => ({
         courseId: s.courseId,
+        courseName: s.courseName,
         lecturerId: s.lecturerId,
+        lecturerName: s.lecturerName,
         roomId: s.roomId,
+        roomName: s.roomName,
         timeslotId: s.timeslotId,
         units: s.units,
       }));

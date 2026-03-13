@@ -22,7 +22,12 @@ def generate_schedule(request: ScheduleRequest):
             "best_fitness": fitness,
             "hard_constraints": result["hard_constraints"],
             "soft_constraints": result["soft_constraints"],
-            "schedule": format_genes(result["best_chromosome"])
+            "schedule": format_genes(
+                result["best_chromosome"],
+                result["courses_dict"],
+                result["lecturers_dict"],
+                result["rooms_dict"]
+            )
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

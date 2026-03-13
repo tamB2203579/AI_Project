@@ -154,9 +154,9 @@ export function TimetableGrid() {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 
     setPopup({
-      courseName: course ? `${course.courseCode} – ${course.name}` : `Course ${gene.courseId}`,
-      roomName: room?.name || `Room ${gene.roomId}`,
-      lecturerName: lecturer?.name || `Lecturer ${gene.lecturerId}`,
+      courseName: gene.courseName || (course ? `${course.courseCode} – ${course.name}` : `Course ${gene.courseId}`),
+      roomName: gene.roomName || room?.name || `Room ${gene.roomId}`,
+      lecturerName: gene.lecturerName || lecturer?.name || `Lecturer ${gene.lecturerId}`,
       timeRange: `${startTime} – ${endTime}`,
       units: gene.units,
       x: rect.left + rect.width / 2,
@@ -275,13 +275,13 @@ export function TimetableGrid() {
                             onClick={(e) => handleCardClick(gene, e)}
                           >
                             <span className="cell-name">
-                              {course ? `${course.courseCode} – ${course.name}` : `Môn ${gene.courseId}`}
+                              {gene.courseName || (course ? `${course.courseCode} – ${course.name}` : `Môn ${gene.courseId}`)}
                             </span>
                             <span className="cell-room">
-                              {room?.name || `Phòng ${gene.roomId}`}
+                              {gene.roomName || (room?.name || `Phòng ${gene.roomId}`)}
                             </span>
                             <span className="cell-lecturer">
-                              {lecturer?.name || `GV ${gene.lecturerId}`}
+                              {gene.lecturerName || (lecturer?.name || `GV ${gene.lecturerId}`)}
                             </span>
                           </div>
                         </td>
@@ -339,7 +339,7 @@ export function TimetableGrid() {
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
-              <span className="detail-text">{popup.timeRange} ({popup.units} periods)</span>
+              <span className="detail-text">{popup.timeRange} ({popup.units} tiết)</span>
             </div>
           </div>
         </div>

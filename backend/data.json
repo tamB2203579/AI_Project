@@ -291,7 +291,7 @@
   "lecturers": [
     {
       "id": 1,
-      "name": "PhD. Nguyen Huu Hoa",
+      "name": "PhD. Nguyễn Hữu Hòa",
       "maxUnitPerWeek": 15,
       "preferenceDay": [
         1,
@@ -301,7 +301,7 @@
     },
     {
       "id": 2,
-      "name": "PhD. Luu Tien Dao",
+      "name": "PhD. Lưu Tiến Đạo",
       "maxUnitPerWeek": 12,
       "preferenceDay": [
         3,
@@ -310,7 +310,7 @@
     },
     {
       "id": 3,
-      "name": "PhD. Ma Truong Thanh",
+      "name": "PhD. Mã Trường Thành",
       "maxUnitPerWeek": 20,
       "preferenceDay": [
         1,
@@ -321,7 +321,7 @@
     },
     {
       "id": 4,
-      "name": "PhD. Lam Hoai Bao",
+      "name": "PhD. Lâm Hoài Bảo",
       "maxUnitPerWeek": 10,
       "preferenceDay": [
         5
@@ -329,7 +329,7 @@
     },
     {
       "id": 5,
-      "name": "Assoc. Prof. Pham Nguyen Khang",
+      "name": "Assoc. Prof. Phạm Nguyên Khang",
       "maxUnitPerWeek": 18,
       "preferenceDay": [
         2,
@@ -339,7 +339,7 @@
     },
     {
       "id": 6,
-      "name": "Prof. Huynh Xuan Hiep",
+      "name": "Prof. Huỳnh Xuân Hiệp",
       "maxUnitPerWeek": 14,
       "preferenceDay": [
         1,
@@ -348,7 +348,7 @@
     },
     {
       "id": 7,
-      "name": "PhD. Phan Phuong Lan",
+      "name": "PhD. Phan Phương Lan",
       "maxUnitPerWeek": 16,
       "preferenceDay": [
         2,
@@ -358,7 +358,7 @@
     },
     {
       "id": 8,
-      "name": "PhD. Nguyen Cong Danh",
+      "name": "PhD. Nguyễn Công Danh",
       "maxUnitPerWeek": 15,
       "preferenceDay": [
         1,
@@ -368,7 +368,7 @@
     },
     {
       "id": 9,
-      "name": "PhD. Huynh Quang Nghi",
+      "name": "PhD. Huỳnh Quang Nghi",
       "maxUnitPerWeek": 12,
       "preferenceDay": [
         2,
@@ -377,7 +377,7 @@
     },
     {
       "id": 10,
-      "name": "PhD. Truong Minh Thai",
+      "name": "PhD. Trương Minh Thái",
       "maxUnitPerWeek": 18,
       "preferenceDay": [
         1,
@@ -389,116 +389,101 @@
   "courses": [
     {
       "id": 1,
+      "courseCode": "CT101",
       "name": "Nền tảng công nghệ thông tin",
-      "unitsPerWeek": 3,
-      "studentsCount": 60,
-      "roomType": [
-        "Lecture"
-      ],
+      "unitsPerWeek": 9,
+      "studentsCount": 90,
+      "roomType": ["Lecture"],
       "lecturerId": 1,
       "maxUnitsPerDay": 3
     },
     {
       "id": 2,
+      "courseCode": "CT201",
       "name": "Nền tảng trí tuệ nhân tạo",
-      "unitsPerWeek": 6,
+      "unitsPerWeek": 12,
       "studentsCount": 60,
-      "roomType": [
-        "Lecture"
-      ],
+      "roomType": ["Lecture"],
       "lecturerId": 2,
       "maxUnitsPerDay": 3
     },
     {
       "id": 3,
+      "courseCode": "CT313",
       "name": "Máy học ứng dụng",
-      "unitsPerWeek": 6,
+      "unitsPerWeek": 12,
       "studentsCount": 50,
-      "roomType": [
-        "Lecture",
-        "Lab"
-      ],
+      "roomType": ["Lab"],
       "lecturerId": 3,
-      "maxUnitsPerDay": 3
+      "maxUnitsPerDay": 4
     },
     {
       "id": 4,
+      "courseCode": "CT175",
       "name": "Cấu trúc dữ liệu",
-      "unitsPerWeek": 6,
+      "unitsPerWeek": 12,
       "studentsCount": 60,
-      "roomType": [
-        "Lecture",
-        "Lab"
-      ],
+      "roomType": ["Lecture", "Lab"],
       "lecturerId": 4,
-      "maxUnitsPerDay": 3
+      "maxUnitsPerDay": 4
     },
     {
       "id": 5,
+      "courseCode": "CT239",
       "name": "Phân tích và thiết kế thuật toán",
-      "unitsPerWeek": 10,
+      "unitsPerWeek": 18,
       "studentsCount": 60,
-      "roomType": [
-        "Lecture",
-        "Lab"
-      ],
+      "roomType": ["Lecture", "Lab"],
       "lecturerId": 5,
       "maxUnitsPerDay": 5
     },
     {
       "id": 6,
+      "courseCode": "CT332",
       "name": "Học sâu công nghệ phần mềm",
-      "unitsPerWeek": 6,
+      "unitsPerWeek": 12,
       "studentsCount": 40,
-      "roomType": [
-        "Lecture",
-        "Lab"
-      ],
+      "roomType": ["Lecture"],
       "lecturerId": 6,
-      "maxUnitsPerDay": 3
+      "maxUnitsPerDay": 4
     },
     {
       "id": 7,
+      "courseCode": "CT200",
       "name": "Nhập môn công nghệ phần mềm",
-      "unitsPerWeek": 6,
-      "studentsCount": 70,
-      "roomType": [
-        "Lecture"
-      ],
+      "unitsPerWeek": 12,
+      "studentsCount": 80,
+      "roomType": ["Lecture"],
       "lecturerId": 7,
       "maxUnitsPerDay": 3
     },
     {
       "id": 8,
+      "courseCode": "CT102",
       "name": "Lập trình căn bản A",
-      "unitsPerWeek": 6,
-      "studentsCount": 60,
-      "roomType": [
-        "Lecture",
-        "Lab"
-      ],
+      "unitsPerWeek": 12,
+      "studentsCount": 75,
+      "roomType": ["Lab"],
       "lecturerId": 8,
       "maxUnitsPerDay": 3
     },
     {
       "id": 9,
+      "courseCode": "CT291",
       "name": "Bảo trì phần mềm",
-      "unitsPerWeek": 3,
+      "unitsPerWeek": 12,
       "studentsCount": 40,
-      "roomType": [
-        "Lecture"
-      ],
+      "roomType": ["Lecture"],
       "lecturerId": 9,
       "maxUnitsPerDay": 3
     },
     {
       "id": 10,
+      "courseCode": "CT240",
       "name": "Quản lý dự án phần mềm",
-      "unitsPerWeek": 6,
+      "unitsPerWeek": 12,
       "studentsCount": 50,
-      "roomType": [
-        "Lecture"
-      ],
+      "roomType": ["Lecture"],
       "lecturerId": 10,
       "maxUnitsPerDay": 3
     }

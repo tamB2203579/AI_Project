@@ -16,13 +16,13 @@ def initialize_population(
 
     courses = sort_courses(courses)
 
-    # split course -> sessions
-    sessions = expand_courses_to_sessions(courses)
+    # split course -> sessions (with virtual class splitting)
+    sessions, new_courses_dict = expand_courses_to_sessions(courses, rooms)
 
     print("=== SESSIONS ===")
     for s in sessions:
         print(
-            "course:", s["course"].name,
+            "course:", s["course"].courseCode,
             "| session:", s["session_id"],
             "| units:", s["units"]
         )
@@ -48,7 +48,7 @@ def initialize_population(
         genes = generate_semi_greedy_chromosome(sessions, rooms, timeslots)
         population.append(Chromosome(genes=genes))
 
-    return population
+    return population, new_courses_dict
 
 
 # RANDOM INIT

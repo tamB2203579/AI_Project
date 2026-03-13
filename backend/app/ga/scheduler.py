@@ -39,13 +39,15 @@ class GAScheduler:
         self.timeslots_dict = {t.id: t for t in timeslots}
 
     def initialize(self):
-        self.population = initialize_population(
+        self.population, new_courses_dict = initialize_population(
             pop_size=self.ga_cfg.pop_size,
             courses=list(self.courses_dict.values()),
             lecturers=list(self.lecturers_dict.values()),
             rooms=list(self.rooms_dict.values()),
             timeslots=list(self.timeslots_dict.values()),
         )
+        # Merge virtual courses into the main dict for fitness evaluation
+        self.courses_dict = new_courses_dict
 
     def evaluate(self, pop: List[Chromosome]):
         for chrom in pop:
@@ -172,4 +174,7 @@ class GAScheduler:
             "stop_reason": stop_reason,
             "hard_constraints": analysis["hard_constraints"],
             "soft_constraints": analysis["soft_constraints"],
+            "courses_dict": self.courses_dict,
+            "lecturers_dict": self.lecturers_dict,
+            "rooms_dict": self.rooms_dict,
         }

@@ -1,4 +1,5 @@
 import random
+import dataclasses
 from app.schemas import Chromosome, Gene
 from app.utils import expand_courses_to_sessions
 
@@ -34,27 +35,24 @@ def initialize_population(
 
     # Greedy
     for _ in range(greedy_size):
-        genes = generate_greedy_chromosome(sessions, lecturers, rooms, timeslots)
-
+        genes = generate_greedy_chromosome(sessions, rooms, timeslots)
         population.append(Chromosome(genes=genes))
 
     # Random
     for _ in range(random_size):
-        genes = generate_random_chromosome(sessions, lecturers, rooms, timeslots)
-
+        genes = generate_random_chromosome(sessions, rooms, timeslots)
         population.append(Chromosome(genes=genes))
 
     # Semi Greedy
     for _ in range(semi_size):
-        genes = generate_semi_greedy_chromosome(sessions, lecturers, rooms, timeslots)
-
+        genes = generate_semi_greedy_chromosome(sessions, rooms, timeslots)
         population.append(Chromosome(genes=genes))
 
     return population
 
 
 # RANDOM INIT
-def generate_random_chromosome(sessions, lecturers, rooms, timeslots):
+def generate_random_chromosome(sessions, rooms, timeslots):
 
     genes = []
 
@@ -63,7 +61,9 @@ def generate_random_chromosome(sessions, lecturers, rooms, timeslots):
         units = session["units"]
         session_id = session["session_id"]
 
-        lecturer = random.choice(lecturers)
+        # Use the course's assigned lecturer (not a random one)
+        lecturer_id = course.lecturerId
+
         room = random.choice(rooms)
 
         valid_slots = [s for s in timeslots if s.start_period + units - 1 <= 9]
@@ -74,7 +74,7 @@ def generate_random_chromosome(sessions, lecturers, rooms, timeslots):
         slot = random.choice(valid_slots)
 
         gene = Gene(
-            lecturer_id=lecturer.id,
+            lecturer_id=lecturer_id,
             room_id=room.id,
             course_id=course.id,
             timeslot_id=slot.id,
@@ -87,35 +87,77 @@ def generate_random_chromosome(sessions, lecturers, rooms, timeslots):
     return genes
 
 
-# GREEDY INIT
-def generate_greedy_chromosome(sessions, lecturers, rooms, timeslots):
+# GREEDY INIT — tracks occupied slots to avoid overlaps
+def generate_greedy_chromosome(sessions, rooms, timeslots):
 
     genes = []
+    # Track occupation: (lecturer_id, day) -> set of occupied periods
+    lecturer_occupied = {}
+    # Track occupation: (room_id, day) -> set of occupied periods
+    room_occupied = {}
 
     for session in sessions:
         course = session["course"]
         units = session["units"]
         session_id = session["session_id"]
+        lecturer_id = course.lecturerId
 
         best_score = -1
         best_option = None
 
-        for lecturer in lecturers:
-            for room in rooms:
-                for slot in timeslots:
-                    if slot.start_period + units - 1 > 9:
-                        continue
+        for room in rooms:
+            for slot in timeslots:
+                if slot.start_period + units - 1 > 9:
+                    continue
 
-                    score = evaluate_option(course, lecturer, room, slot)
+                # Check session boundary (morning: 1-5, afternoon: 6-9)
+                start = slot.start_period
+                end = start + units - 1
+                if start <= 5 and end >= 6:
+                    continue
 
-                    if score > best_score:
-                        best_score = score
-                        best_option = (lecturer, room, slot)
+                # Check lecturer overlap
+                lec_key = (lecturer_id, slot.day)
+                occupied_periods = set(range(start, end + 1))
+                if lec_key in lecturer_occupied and lecturer_occupied[lec_key] & occupied_periods:
+                    continue
 
-        lecturer, room, slot = best_option
+                # Check room overlap
+                room_key = (room.id, slot.day)
+                if room_key in room_occupied and room_occupied[room_key] & occupied_periods:
+                    continue
+
+                score = evaluate_option(course, room, slot, lecturer_id)
+
+                if score > best_score:
+                    best_score = score
+                    best_option = (room, slot, occupied_periods, lec_key, room_key)
+
+        if best_option is None:
+            # Fallback: random placement if no valid option found
+            room = random.choice(rooms)
+            valid_slots = [s for s in timeslots if s.start_period + units - 1 <= 9]
+            slot = random.choice(valid_slots) if valid_slots else timeslots[0]
+            start = slot.start_period
+            end = start + units - 1
+            occupied_periods = set(range(start, end + 1))
+            lec_key = (lecturer_id, slot.day)
+            room_key = (room.id, slot.day)
+            best_option = (room, slot, occupied_periods, lec_key, room_key)
+
+        room, slot, occupied_periods, lec_key, room_key = best_option
+
+        # Mark occupation
+        if lec_key not in lecturer_occupied:
+            lecturer_occupied[lec_key] = set()
+        lecturer_occupied[lec_key] |= occupied_periods
+
+        if room_key not in room_occupied:
+            room_occupied[room_key] = set()
+        room_occupied[room_key] |= occupied_periods
 
         gene = Gene(
-            lecturer_id=lecturer.id,
+            lecturer_id=lecturer_id,
             room_id=room.id,
             course_id=course.id,
             timeslot_id=slot.id,
@@ -129,37 +171,73 @@ def generate_greedy_chromosome(sessions, lecturers, rooms, timeslots):
 
 
 # SEMI GREEDY INIT
-def generate_semi_greedy_chromosome(sessions, lecturers, rooms, timeslots):
+def generate_semi_greedy_chromosome(sessions, rooms, timeslots):
 
     genes = []
+    lecturer_occupied = {}
+    room_occupied = {}
 
     for session in sessions:
         course = session["course"]
         units = session["units"]
         session_id = session["session_id"]
+        lecturer_id = course.lecturerId
 
         candidates = []
 
-        for lecturer in lecturers:
-            for room in rooms:
-                for slot in timeslots:
-                    if slot.start_period + units - 1 > 9:
-                        continue
+        for room in rooms:
+            for slot in timeslots:
+                if slot.start_period + units - 1 > 9:
+                    continue
 
-                    score = evaluate_option(course, lecturer, room, slot)
+                start = slot.start_period
+                end = start + units - 1
+                if start <= 5 and end >= 6:
+                    continue
 
-                    candidates.append((score, lecturer, room, slot))
+                # Check lecturer overlap
+                lec_key = (lecturer_id, slot.day)
+                occupied_periods = set(range(start, end + 1))
+                if lec_key in lecturer_occupied and lecturer_occupied[lec_key] & occupied_periods:
+                    continue
+
+                # Check room overlap
+                room_key = (room.id, slot.day)
+                if room_key in room_occupied and room_occupied[room_key] & occupied_periods:
+                    continue
+
+                score = evaluate_option(course, room, slot, lecturer_id)
+                candidates.append((score, room, slot, occupied_periods, lec_key, room_key))
+
+        if not candidates:
+            # Fallback
+            room = random.choice(rooms)
+            valid_slots = [s for s in timeslots if s.start_period + units - 1 <= 9]
+            slot = random.choice(valid_slots) if valid_slots else timeslots[0]
+            start = slot.start_period
+            end = start + units - 1
+            occupied_periods = set(range(start, end + 1))
+            lec_key = (lecturer_id, slot.day)
+            room_key = (room.id, slot.day)
+            candidates.append((0, room, slot, occupied_periods, lec_key, room_key))
 
         candidates.sort(key=lambda x: x[0], reverse=True)
-
         top_candidates = candidates[:TOP_K]
-
         chosen = random.choice(top_candidates)
 
-        _, lecturer, room, slot = chosen
+        _, room, slot, occupied_periods, lec_key, room_key = chosen
+
+        # Mark occupation
+        if lec_key not in lecturer_occupied:
+            lecturer_occupied[lec_key] = set()
+        lecturer_occupied[lec_key] |= occupied_periods
+
+        if room_key not in room_occupied:
+            room_occupied[room_key] = set()
+        room_occupied[room_key] |= occupied_periods
 
         gene = Gene(
-            lecturer_id=lecturer.id,
+            lecturer_id=lecturer_id,
             room_id=room.id,
             course_id=course.id,
             timeslot_id=slot.id,
@@ -173,7 +251,7 @@ def generate_semi_greedy_chromosome(sessions, lecturers, rooms, timeslots):
 
 
 # SCORING FUNCTION
-def evaluate_option(course, lecturer, room, slot):
+def evaluate_option(course, room, slot, lecturer_id=None):
 
     score = 0
 
@@ -182,9 +260,6 @@ def evaluate_option(course, lecturer, room, slot):
 
     if room.type in course.roomType:
         score += 5
-
-    if slot.day in lecturer.preferenceDay:
-        score += 3
 
     return score
 

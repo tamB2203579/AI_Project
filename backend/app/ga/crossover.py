@@ -5,27 +5,27 @@ from app.schemas import Chromosome
 def single_point_crossover(parent1: Chromosome, parent2: Chromosome):
     length = len(parent1.genes)
     if length <= 1:
-        return Chromosome(genes=parent1.genes.copy()), Chromosome(genes=parent2.genes.copy())
+        return Chromosome(genes=[dataclasses.replace(g) for g in parent1.genes]), Chromosome(genes=[dataclasses.replace(g) for g in parent2.genes])
     point = random.randint(1, length - 1)
-    child1_genes = parent1.genes[:point] + parent2.genes[point:]
-    child2_genes = parent2.genes[:point] + parent1.genes[point:]
+    child1_genes = [dataclasses.replace(g) for g in parent1.genes[:point]] + [dataclasses.replace(g) for g in parent2.genes[point:]]
+    child2_genes = [dataclasses.replace(g) for g in parent2.genes[:point]] + [dataclasses.replace(g) for g in parent1.genes[point:]]
     return Chromosome(genes=child1_genes), Chromosome(genes=child2_genes)
 
 def two_point_crossover(parent1: Chromosome, parent2: Chromosome):
     length = len(parent1.genes)
-    if length < 3: # Nếu gen quá ngắn thì fallback về single point
+    if length < 3:
         return single_point_crossover(parent1, parent2)
         
     point1 = random.randint(1, length - 2)
     point2 = random.randint(point1 + 1, length - 1)
     
-    child1_genes = (parent1.genes[:point1] + 
-                    parent2.genes[point1:point2] + 
-                    parent1.genes[point2:])
+    child1_genes = ([dataclasses.replace(g) for g in parent1.genes[:point1]] + 
+                    [dataclasses.replace(g) for g in parent2.genes[point1:point2]] + 
+                    [dataclasses.replace(g) for g in parent1.genes[point2:]])
                     
-    child2_genes = (parent2.genes[:point1] + 
-                    parent1.genes[point1:point2] + 
-                    parent2.genes[point2:])
+    child2_genes = ([dataclasses.replace(g) for g in parent2.genes[:point1]] + 
+                    [dataclasses.replace(g) for g in parent1.genes[point1:point2]] + 
+                    [dataclasses.replace(g) for g in parent2.genes[point2:]])
                     
     return Chromosome(genes=child1_genes), Chromosome(genes=child2_genes)
 
@@ -41,34 +41,27 @@ def uniform_crossover(parent1: Chromosome, parent2: Chromosome):
     return Chromosome(genes=child1_genes), Chromosome(genes=child2_genes)
 
 def multi_point_crossover(parent1: Chromosome, parent2: Chromosome, n=3):
-    """
-    Lai ghép tại n điểm cắt ngẫu nhiên.
-    """
     length = len(parent1.genes)
     if length <= n:
         return single_point_crossover(parent1, parent2)
 
-    # Chọn n điểm cắt ngẫu nhiên và sắp xếp tăng dần
     points = sorted(random.sample(range(1, length), n))
     
     child1_genes = []
     child2_genes = []
     
-    # Biến để hoán đổi cha mẹ sau mỗi điểm cắt
     curr_parent1, curr_parent2 = parent1.genes, parent2.genes
     last_point = 0
     
     for point in points:
-        child1_genes.extend(curr_parent1[last_point:point])
-        child2_genes.extend(curr_parent2[last_point:point])
+        child1_genes.extend([dataclasses.replace(g) for g in curr_parent1[last_point:point]])
+        child2_genes.extend([dataclasses.replace(g) for g in curr_parent2[last_point:point]])
         
-        # Hoán đổi cha mẹ cho đoạn kế tiếp
         curr_parent1, curr_parent2 = curr_parent2, curr_parent1
         last_point = point
         
-    # Thêm đoạn cuối cùng sau điểm cắt cuối
-    child1_genes.extend(curr_parent1[last_point:])
-    child2_genes.extend(curr_parent2[last_point:])
+    child1_genes.extend([dataclasses.replace(g) for g in curr_parent1[last_point:]])
+    child2_genes.extend([dataclasses.replace(g) for g in curr_parent2[last_point:]])
     
     return Chromosome(genes=child1_genes), Chromosome(genes=child2_genes)
 
@@ -94,6 +87,9 @@ def crossover_population(population, method="single_point", crossover_rate=0.8, 
                 c1, c2 = single_point_crossover(parent1, parent2)
             new_population.extend([c1, c2])
         else:
-            new_population.extend([Chromosome(genes=parent1.genes.copy()), Chromosome(genes=parent2.genes.copy())])
+            new_population.extend([
+                Chromosome(genes=[dataclasses.replace(g) for g in parent1.genes]),
+                Chromosome(genes=[dataclasses.replace(g) for g in parent2.genes])
+            ])
             
     return new_population[:pop_size]

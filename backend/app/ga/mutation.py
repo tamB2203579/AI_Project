@@ -1,25 +1,18 @@
 import random
 
 def random_reassignment_mutation(gene, lecturers, rooms, timeslots):
-    mutate_type = random.choice(["timeslot", "room", "lecturer"])
+    # Only mutate timeslot or room — lecturer is fixed per course
+    mutate_type = random.choice(["timeslot", "room"])
     
     if mutate_type == "timeslot":
-        # Lọc ra các slot hợp lệ (không vượt quá period 9) VÀ khác với slot hiện tại
         valid_slots = [s for s in timeslots if s.start_period + gene.units - 1 <= 9 and s.id != gene.timeslot_id]
         if valid_slots:
             gene.timeslot_id = random.choice(valid_slots).id
             
     elif mutate_type == "room":
-        # Lọc ra các phòng khác với phòng hiện tại
         valid_rooms = [r for r in rooms if r.id != gene.room_id]
         if valid_rooms:
             gene.room_id = random.choice(valid_rooms).id
-            
-    elif mutate_type == "lecturer":
-        # Lọc ra các giảng viên khác với giảng viên hiện tại
-        valid_lecturers = [l for l in lecturers if l.id != gene.lecturer_id]
-        if valid_lecturers:
-            gene.lecturer_id = random.choice(valid_lecturers).id
 
 def swap_mutation(chromosome):
     unit_groups = {}

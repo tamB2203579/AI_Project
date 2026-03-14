@@ -68,7 +68,7 @@ def format_genes(chromosome, courses_dict, lecturers_dict, rooms_dict):
         formatted.append({
             "session": g.session_id,
             "courseId": g.course_id,
-            "courseName": course.courseCode if course else "Unknown",
+            "courseName": f"{course.courseCode} – {course.name}" if course else "Unknown",
             "units": g.units,
             "lecturerId": g.lecturer_id,
             "lecturerName": lecturer.name if lecturer else "Unknown",

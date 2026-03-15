@@ -1,5 +1,4 @@
 import random
-import dataclasses
 from app.schemas import Chromosome, Gene
 from app.utils import expand_courses_to_sessions
 
@@ -320,7 +319,7 @@ def generate_semi_greedy_chromosome(sessions, rooms, timeslots):
 
 
 # SCORING FUNCTION
-def evaluate_option(course, room, slot, lecturer_id=None):
+def evaluate_option(course, room):
 
     score = 0
 

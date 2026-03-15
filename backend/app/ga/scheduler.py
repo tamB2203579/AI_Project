@@ -1,5 +1,5 @@
 import dataclasses
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from app.data_store import get_collection
 from app.schemas import Course, Lecturer, Room, TimeSlot 
 

@@ -9,8 +9,8 @@ class StoppingCondition:
         target_fitness: float = None,  # Tuỳ chọn dừng khi đạt ngưỡng
         max_time_seconds: int = 30,  # Ví dụ 1 phút thực thi
         max_stall_generations: int = 50,  # Số thế hệ không cải thiện trước khi kích hoạt chống bão hoà
-        base_mutation_rate: float = 0.1,
-        max_mutation_rate: float = 0.5,
+        base_mutation_rate: float = 0.05,
+        max_mutation_rate: float = 1.0,
     ):
         self.max_generations = max_generations
         self.target_fitness = target_fitness

@@ -31,7 +31,7 @@ class CrossoverConfig(BaseModel):
 
 
 class MutationConfig(BaseModel):
-    method: str = Field(default="random", description="random | swap | creep")
+    method: str = Field(default="random", description="random | swap | creep | heuristic")
     rate: float = Field(default=0.05, ge=0.0, le=1.0, description="Tỷ lệ đột biến")
 
 
@@ -39,7 +39,7 @@ class GAConfig(BaseModel):
     pop_size: int = Field(default=100, ge=10, le=1000, description="Kích thước quần thể")
     elitism_rate: float = Field(default=0.1, ge=0.0, le=1.0, description="Tỷ lệ elite giữ lại")
     max_generations: int = Field(default=500, ge=1, le=10000, description="Số thế hệ tối đa")
-    max_time_seconds: int = Field(default=60, ge=1, le=600, description="Thời gian tối đa (giây)")
+    max_time_seconds: int = Field(default=30, ge=1, le=300, description="Thời gian tối đa (giây)")
     max_stall_generations: int = Field(default=50, ge=1, description="Số thế hệ không cải thiện trước khi tăng đột biến")
     target_fitness: Optional[float] = Field(default=None, description="Ngưỡng fitness mục tiêu")
 

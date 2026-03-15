@@ -90,7 +90,7 @@ export interface CrossoverConfig {
 }
 
 export interface MutationConfig {
-    method: string;       // "random" | "swap" | "creep"
+    method: string;       // "random" | "swap" | "creep" | "heuristic"
     rate: number;
 }
 

@@ -8,7 +8,7 @@ const defaultConfig: ScheduleRequest = {
   fitness: {
     method: "weighted",
     base_score: 1000,
-    hard_penalty: 50,
+    hard_penalty: 100,
     soft_bonus: 5,
     alpha: 1000,
     beta: 10,
@@ -24,13 +24,13 @@ const defaultConfig: ScheduleRequest = {
   },
   mutation: {
     method: "random",
-    rate: 0.05,
+    rate: 0.1,
   },
   ga: {
     pop_size: 100,
     elitism_rate: 0.1,
     max_generations: 500,
-    max_time_seconds: 60,
+    max_time_seconds: 30,
     max_stall_generations: 50,
     target_fitness: null,
   },
@@ -166,7 +166,7 @@ export function GAControls() {
               <span className="param-value">{config.ga.max_time_seconds}s</span>
             </label>
             <input
-              type="range" min={10} max={300} step={10}
+              type="range" min={10} max={60} step={5}
               value={config.ga.max_time_seconds} disabled={disabled}
               onChange={(e) => updateGA({ max_time_seconds: Number(e.target.value) })}
             />
@@ -280,6 +280,7 @@ export function GAControls() {
               <option value="random">Random</option>
               <option value="swap">Swap</option>
               <option value="creep">Creep</option>
+              <option value="heuristic">Heuristic</option>
             </select>
           </div>
 

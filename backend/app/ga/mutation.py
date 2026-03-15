@@ -1,6 +1,6 @@
 import random
 
-def random_reassignment_mutation(gene, lecturers, rooms, timeslots, courses_dict=None):
+def random_reassignment_mutation(gene, rooms, timeslots, courses_dict=None):
     # Only mutate timeslot or room — lecturer is fixed per course
     mutate_type = random.choice(["timeslot", "room"])
     
@@ -13,6 +13,7 @@ def random_reassignment_mutation(gene, lecturers, rooms, timeslots, courses_dict
         ]
         if valid_slots:
             gene.timeslot_id = random.choice(valid_slots).id
+            return True
             
     elif mutate_type == "room":
         valid_rooms = [r for r in rooms if r.id != gene.room_id]
@@ -22,6 +23,9 @@ def random_reassignment_mutation(gene, lecturers, rooms, timeslots, courses_dict
             
         if valid_rooms:
             gene.room_id = random.choice(valid_rooms).id
+            return True
+
+    return False  # No valid candidate found for the chosen mutate_type
 
 def swap_mutation(chromosome):
     unit_groups = {}
@@ -59,18 +63,17 @@ def creep_mutation(gene, timeslots):
         return True
     return False
 
-def heuristic_mutation(chromosome, lecturers, rooms, timeslots, courses_dict, lecturers_dict, rooms_dict, timeslots_dict):
+def heuristic_mutation(chromosome, rooms, timeslots, courses_dict, lecturers_dict, rooms_dict, timeslots_dict):
     """
     Heuristic Mutation: Nhắm mục tiêu trực tiếp vào các gene đang gây ra lỗi Hard Constraint.
+    Dùng bitmask (giống fitness.py) để phát hiện trùng lặp — tránh lỗi phụ thuộc thứ tự
+    của cách quét list-of-tuples cũ (gene đầu tiên trong cặp trùng không bị đánh dấu lỗi).
     """
-    # 1. Quét tìm các gene lỗi bằng cách giả lập chạy hàm evaluate của Tâm
-    # Tuy nhiên, hàm của Tâm trả về tổng số lượng vi phạm chứ không chỉ ra đích danh gene nào.
-    # Nên ở đây, ta phải tự mô phỏng một vòng quét nhỏ để tìm các thủ phạm.
-    
     faulty_genes = []
-    
-    lecturer_schedule = {}
-    room_schedule = {}
+
+    # Bitmask: (lecturer_id, day) -> int,  (room_id, day) -> int
+    lecturer_masks = {}
+    room_masks = {}
 
     for gene in chromosome.genes:
         is_faulty = False
@@ -83,61 +86,65 @@ def heuristic_mutation(chromosome, lecturers, rooms, timeslots, courses_dict, le
         day = timeslot.day
 
         # Kiểm tra nhanh các lỗi cá nhân của gene
-        if end > 9 or (start <= 5 and end >= 6) or room.capacity < course.studentsCount or room.type not in course.roomType:
+        if (end > 9
+                or (start <= 5 and end >= 6)
+                or room.capacity < course.studentsCount
+                or room.type not in course.roomType):
             is_faulty = True
 
-        # Kiểm tra trùng lặp GV
+        # Bitmask cho tiết học: tiết 1 -> bit 0, tiết 2 -> bit 1, ...
+        period_mask = ((1 << gene.units) - 1) << (start - 1)
+
+        # Kiểm tra trùng lặp GV — bitmask phát hiện cả hai gene trong cặp trùng
         lec_key = (gene.lecturer_id, day)
-        if lec_key not in lecturer_schedule:
-            lecturer_schedule[lec_key] = []
-        for e_start, e_end in lecturer_schedule[lec_key]:
-            if not (end < e_start or start > e_end):
-                is_faulty = True
-                break
-        lecturer_schedule[lec_key].append((start, end))
+        if lec_key not in lecturer_masks:
+            lecturer_masks[lec_key] = 0
+        if lecturer_masks[lec_key] & period_mask:
+            is_faulty = True
+        lecturer_masks[lec_key] |= period_mask
 
         # Kiểm tra trùng lặp Phòng
         room_key = (gene.room_id, day)
-        if room_key not in room_schedule:
-            room_schedule[room_key] = []
-        for e_start, e_end in room_schedule[room_key]:
-            if not (end < e_start or start > e_end):
-                is_faulty = True
-                break
-        room_schedule[room_key].append((start, end))
+        if room_key not in room_masks:
+            room_masks[room_key] = 0
+        if room_masks[room_key] & period_mask:
+            is_faulty = True
+        room_masks[room_key] |= period_mask
 
         if is_faulty:
             faulty_genes.append(gene)
 
-    # 2. Nếu tìm thấy gene lỗi, ép buộc một số gene trong đó phải thay đổi ngẫu nhiên
+    # Nếu tìm thấy gene lỗi, ép buộc một số gene trong đó phải thay đổi ngẫu nhiên
     mutations_done = 0
     if faulty_genes:
         # Giới hạn số lượng đột biến heuristic để tránh phá nát NST
-        num_to_fix = min(len(faulty_genes), max(1, len(chromosome.genes) // 10)) 
+        num_to_fix = min(len(faulty_genes), max(1, len(chromosome.genes) // 10))
         target_genes = random.sample(faulty_genes, num_to_fix)
-        
+
         for gene in target_genes:
             # Dùng random_reassignment để ép gene này nhảy sang vị trí/phòng khác
-            random_reassignment_mutation(gene, lecturers, rooms, timeslots, courses_dict)
+            random_reassignment_mutation(gene, rooms, timeslots, courses_dict)
             mutations_done += 1
-            
+
     return mutations_done
 
 
 def mutate_population(population, lecturers, rooms, timeslots, method="random", mutation_rate=0.05, **kwargs):
     """
     Cập nhật hàm điều phối để hỗ trợ Heuristic.
+    Tham số `lecturers` được giữ lại trong signature để tương thích ngược với scheduler.py,
+    nhưng không được dùng nữa vì lecturer là cố định theo môn học.
     """
     for chromosome in population:
         if method == "swap":
             if random.random() < mutation_rate:
                 swap_mutation(chromosome)
-                
+
         elif method == "heuristic":
             # Heuristic áp dụng thẳng trên NST dựa trên rate
             if random.random() < mutation_rate:
                 heuristic_mutation(
-                    chromosome, lecturers, rooms, timeslots,
+                    chromosome, rooms, timeslots,
                     kwargs.get("courses_dict"),
                     kwargs.get("lecturers_dict"),
                     kwargs.get("rooms_dict"),
@@ -148,7 +155,7 @@ def mutate_population(population, lecturers, rooms, timeslots, method="random", 
             for gene in chromosome.genes:
                 if random.random() < mutation_rate:
                     if method == "random":
-                        random_reassignment_mutation(gene, lecturers, rooms, timeslots, courses_dict)
+                        random_reassignment_mutation(gene, rooms, timeslots, courses_dict)
                     elif method == "creep":
                         creep_mutation(gene, timeslots)
     return population

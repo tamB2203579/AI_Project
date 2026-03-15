@@ -9,7 +9,6 @@ TOP_K = 3
 def initialize_population(
     pop_size,
     courses,
-    lecturers,
     rooms,
     timeslots,
 ):
@@ -176,6 +175,9 @@ def generate_greedy_chromosome(sessions, rooms, timeslots):
                     if s.start_period + units - 1 <= 9
                     and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
                 ]
+            # timeslots[0] bị bỏ — có thể vi phạm ràng buộc units; dùng safe_fallback thay thế
+            if not valid_slots:
+                valid_slots = [s for s in timeslots if s.start_period + units - 1 <= 9]
             slot = random.choice(valid_slots) if valid_slots else timeslots[0]
             start = slot.start_period
             end = start + units - 1
@@ -276,6 +278,9 @@ def generate_semi_greedy_chromosome(sessions, rooms, timeslots):
                     if s.start_period + units - 1 <= 9
                     and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
                 ]
+            # timeslots[0] bị bỏ — có thể vi phạm ràng buộc units; dùng safe_fallback thay thế
+            if not valid_slots:
+                valid_slots = [s for s in timeslots if s.start_period + units - 1 <= 9]
             slot = random.choice(valid_slots) if valid_slots else timeslots[0]
             start = slot.start_period
             end = start + units - 1

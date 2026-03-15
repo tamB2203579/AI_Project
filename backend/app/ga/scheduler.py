@@ -1,3 +1,4 @@
+import dataclasses
 from typing import List, Dict, Any, Optional
 from app.data_store import get_collection
 from app.schemas import Course, Lecturer, Room, TimeSlot 
@@ -24,7 +25,7 @@ class GAScheduler:
         
         self.population = []
         self.best_chromosome = None
-        self.best_fitness = float('-inf')
+        self.best_fitness = None   # None-initialized: safe for both scalar and tuple fitness types
         self.stopping = None
 
     def _load_data(self):
@@ -42,7 +43,6 @@ class GAScheduler:
         self.population, new_courses_dict = initialize_population(
             pop_size=self.ga_cfg.pop_size,
             courses=list(self.courses_dict.values()),
-            lecturers=list(self.lecturers_dict.values()),
             rooms=list(self.rooms_dict.values()),
             timeslots=list(self.timeslots_dict.values()),
         )
@@ -50,39 +50,30 @@ class GAScheduler:
         self.courses_dict = new_courses_dict
 
     def evaluate(self, pop: List[Chromosome]):
+        # Build method-specific kwargs once, then reuse for every chromosome
+        extra_kwargs: Dict[str, Any] = {}
+        if self.fit_cfg.method == "penalty":
+            extra_kwargs = {
+                "base_score": self.fit_cfg.base_score,
+                "hard_penalty": self.fit_cfg.hard_penalty,
+                "soft_bonus": self.fit_cfg.soft_bonus,
+            }
+        elif self.fit_cfg.method == "alpha_beta":
+            extra_kwargs = {
+                "alpha": self.fit_cfg.alpha,
+                "beta": self.fit_cfg.beta,
+            }
+
         for chrom in pop:
-            if self.fit_cfg.method == "penalty":
-                pick_fitness_method(
-                    chromosome=chrom,
-                    courses_dict=self.courses_dict,
-                    lecturers_dict=self.lecturers_dict,
-                    rooms_dict=self.rooms_dict,
-                    timeslots_dict=self.timeslots_dict,
-                    method=self.fit_cfg.method,
-                    base_score=self.fit_cfg.base_score,
-                    hard_penalty=self.fit_cfg.hard_penalty,
-                    soft_bonus=self.fit_cfg.soft_bonus,
-                )
-            elif self.fit_cfg.method == "alpha_beta":
-                pick_fitness_method(
-                    chromosome=chrom,
-                    courses_dict=self.courses_dict,
-                    lecturers_dict=self.lecturers_dict,
-                    rooms_dict=self.rooms_dict,
-                    timeslots_dict=self.timeslots_dict,
-                    method=self.fit_cfg.method,
-                    alpha=self.fit_cfg.alpha,
-                    beta=self.fit_cfg.beta
-                )
-            else:
-                pick_fitness_method(
-                    chromosome=chrom,
-                    courses_dict=self.courses_dict,
-                    lecturers_dict=self.lecturers_dict,
-                    rooms_dict=self.rooms_dict,
-                    timeslots_dict=self.timeslots_dict,
-                    method=self.fit_cfg.method,
-                )
+            pick_fitness_method(
+                chromosome=chrom,
+                courses_dict=self.courses_dict,
+                lecturers_dict=self.lecturers_dict,
+                rooms_dict=self.rooms_dict,
+                timeslots_dict=self.timeslots_dict,
+                method=self.fit_cfg.method,
+                **extra_kwargs,
+            )
 
     def run(self) -> Dict[str, Any]:
         self.initialize()
@@ -114,10 +105,9 @@ class GAScheduler:
             if isinstance(current_best_fitness, tuple):
                 scalar_fitness = current_best_fitness[0] * 10000 + current_best_fitness[1]
 
-            # Update overall best
+            # Update overall best — None-guard makes this safe for tuple fitness (lexicographic)
             if self.best_chromosome is None or current_best_fitness > self.best_fitness:
                 self.best_fitness = current_best_fitness
-                import dataclasses
                 self.best_chromosome = Chromosome(genes=[dataclasses.replace(g) for g in current_best.genes], fitness=current_best.fitness)
             
             # Check stopping

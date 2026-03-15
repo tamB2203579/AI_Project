@@ -75,7 +75,14 @@ def elimination_selection(
 
     # Sắp xếp giảm dần theo fitness và lấy các cá thể tốt nhất
     sorted_population = sorted(population, key=lambda ind: ind.fitness, reverse=True)
-    return sorted_population[:num_parents]
+    top = sorted_population[:num_parents]
+
+    # Nếu quần thể nhỏ hơn num_parents, bổ sung bằng cách lấy mẫu có hoàn lại
+    # để tránh trả về ít hơn yêu cầu — điều đó sẽ làm quần thể teo dần qua các thế hệ.
+    if len(top) < num_parents:
+        top += random.choices(sorted_population, k=num_parents - len(top))
+
+    return top
 
 
 SELECTION_METHODS = {

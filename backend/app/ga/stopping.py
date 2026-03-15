@@ -22,13 +22,13 @@ class StoppingCondition:
 
         # State tracking
         self.start_time = None
-        self.best_fitness_ever = float("-inf")
+        self.best_fitness_ever = None   # None so first comparison always succeeds regardless of fitness type (scalar or tuple)
         self.stall_count = 0
         self.current_mutation_rate = base_mutation_rate
 
     def reset(self):
         self.start_time = time.time()
-        self.best_fitness_ever = float("-inf")
+        self.best_fitness_ever = None   # Reset to None — same reason as above
         self.stall_count = 0
         self.current_mutation_rate = self.base_mutation_rate
 
@@ -51,7 +51,12 @@ class StoppingCondition:
             )
 
         # Theo dõi sự cải thiện của Fitness
-        if current_best_fitness > self.best_fitness_ever:
+        # Dùng None-guard để tránh so sánh tuple vs float('-inf') khi dùng lexicographic fitness
+        improved = (
+            self.best_fitness_ever is None
+            or current_best_fitness > self.best_fitness_ever
+        )
+        if improved:
             self.best_fitness_ever = current_best_fitness
             self.stall_count = 0
             # Reset lại tỷ lệ đột biến khi thoát khỏi vùng cực trị địa phương
@@ -60,8 +65,11 @@ class StoppingCondition:
             self.stall_count += 1
 
         # Best fitness đạt ngưỡng mong muốn
+        # Chỉ áp dụng cho scalar — tuple không so sánh được với target_fitness số thực
         if (
             self.target_fitness is not None
+            and self.best_fitness_ever is not None
+            and not isinstance(self.best_fitness_ever, tuple)
             and self.best_fitness_ever >= self.target_fitness
         ):
             return (
@@ -76,7 +84,8 @@ class StoppingCondition:
                 self.current_mutation_rate = min(
                     self.max_mutation_rate, self.current_mutation_rate + 0.05
                 )
-                # Reset lại một phần biến đếm stall để xem đột biến cao có hiệu quả không
+                # Đặt lại stall_count về nửa ngưỡng: giữ mutation cao thêm max_stall//2 thế hệ
+                # trước khi có thể kích hoạt tăng mutation lần tiếp theo.
                 self.stall_count = self.max_stall_generations // 2
             else:
                 # Nếu đã max đột biến mà vẫn dậm chân tại chỗ quá lâu (100+ thế hệ), hệ thống cho dừng để tránh lãng phí vòng lặp.

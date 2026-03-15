@@ -1,3 +1,4 @@
+import math
 from app.schemas import Chromosome, Course, Lecturer, Room, TimeSlot
 
 
@@ -52,20 +53,20 @@ def evaluate_all_constraints(
         # === 1. ĐÁNH GIÁ THỜI GIAN (HARD) === #
         if end_period > 9:
             hard_counts["time_violations"] += 1
-            hard_details.append(f"Vượt thời gian: Môn {course.id} kết thúc quá tiết 9 (Tiết {end_period})")
+            hard_details.append(f"Vượt thời gian: Môn {course.name} {course.courseCode} kết thúc quá tiết 9 (Tiết {end_period})")
 
         if start_period <= 5 and end_period >= 6:
             hard_counts["time_violations"] += 1
-            hard_details.append(f"Vắt ngang ca: Môn {course.id} bị kẹp giữa ca Sáng/Chiều")
+            hard_details.append(f"Vắt ngang ca: Môn {course.name} {course.courseCode} bị kẹp giữa ca Sáng/Chiều")
 
         # === 2. ĐÁNH GIÁ CƠ SỞ VẬT CHẤT (HARD) === #
         if room.type not in course.roomType:
             hard_counts["room_suitability_violations"] += 1
-            hard_details.append(f"Loại phòng: Môn {course.name} cần {course.roomType}, xếp vào P.{room.id} ({room.type})")
+            hard_details.append(f"Loại phòng: Môn {course.name} {course.courseCode} cần {course.roomType}, xếp vào P.{room.id} ({room.type})")
         
         if room.capacity < course.studentsCount:
             hard_counts["room_suitability_violations"] += 1
-            hard_details.append(f"Sức chứa: Môn {course.name} ({course.studentsCount} sv), xếp vào P.{room.name} (chứa {room.capacity})")
+            hard_details.append(f"Sức chứa: Môn {course.name} {course.courseCode} ({course.studentsCount} sv), xếp vào P.{room.name} (chứa {room.capacity})")
 
         # === 3. TRÙNG LẶP MÔN TRONG NGÀY (HARD) === #
         if course.id not in course_days:
@@ -73,13 +74,14 @@ def evaluate_all_constraints(
             
         if day in course_days[course.id]:
             hard_counts["daily_limit_violations"] += 1
-            hard_details.append(f"Giới hạn ngày: Môn {course.id} có nhiều hơn 1 buổi trên Ngày {day}")
+            hard_details.append(f"Giới hạn ngày: Môn {course.name} {course.courseCode} có nhiều hơn 1 buổi trên Ngày {day}")
             
         course_days[course.id].add(day)
 
         # === 3. SỞ THÍCH VÀ SỨC CHỨA (SOFT) === #
         if day in lecturer.preferenceDay:
             soft_scores["preference_score"] += 1
+            soft_details.append(f"GV {lecturer.name} dạy đúng ngày sở thích (Ngày {day}) — Môn {course.name} {course.courseCode}")
 
         # === 4. TRÙNG LẶP SỬ DỤNG BITMASK (HARD) === #
         # Hàm sinh ra chuỗi nhị phân (vd: Start=2, Length=2 -> 0b0000000110)
@@ -96,7 +98,7 @@ def evaluate_all_constraints(
         
         if lecturer_masks[lecturer_key] & period_mask:
             hard_counts["overlap_violations"] += 1
-            hard_details.append(f"GV {lecturer.id} kẹt lịch Ngày {day}")
+            hard_details.append(f"GV {lecturer.name} kẹt lịch Ngày {day}")
         
         lecturer_masks[lecturer_key] |= period_mask
         lecturer_schedule_blocks[lecturer_key].append((start_period, end_period, room.id))
@@ -107,7 +109,7 @@ def evaluate_all_constraints(
             
         if room_masks[room_key] & period_mask:
             hard_counts["overlap_violations"] += 1
-            hard_details.append(f"Phòng {room.id} bị trùng lịch Ngày {day}")
+            hard_details.append(f"Phòng {room.name} bị trùng lịch Ngày {day}")
             
         room_masks[room_key] |= period_mask
 
@@ -118,8 +120,10 @@ def evaluate_all_constraints(
 
         if total_p <= 8:
             soft_scores["workload_score"] += 1
+            soft_details.append(f"GV {lecturer.name} Ngày {day}: Tải hợp lý ({total_p} tiết)")
         else:
             soft_scores["workload_score"] -= 1
+            soft_details.append(f"GV {lecturer.name} Ngày {day}: Quá tải ({total_p} tiết)")
 
         consecutive_p = 0
         last_e = -1
@@ -133,6 +137,7 @@ def evaluate_all_constraints(
                 # FIX: Check the very first block for excessive consecutive periods
                 if consecutive_p > 5:
                     soft_scores["workload_score"] -= 1
+                    soft_details.append(f"GV {lecturer.name} Ngày {day}: Dạy liên tục quá 5 tiết ngay đầu ca")
                     consecutive_p = 0
                 continue
 
@@ -143,13 +148,16 @@ def evaluate_all_constraints(
                 consecutive_p += e - s + 1
                 if last_r == r_id:
                     soft_scores["movement_score"] += 1
+                    soft_details.append(f"GV {lecturer.name} Ngày {day}: Dạy liên tiếp cùng phòng P.{room.name}")
             elif gap == 1:
                 # FIX: A 1-period gap is a minor inconvenience, slight penalty (was +1, which was wrong)
                 soft_scores["idle_time_score"] -= 1
+                soft_details.append(f"GV {lecturer.name} Ngày {day}: Chờ 1 tiết giữa 2 lớp (nhỏ)")
                 consecutive_p = e - s + 1
             else:
                 # FIX: A large gap is a bigger penalty (was -1, which punished less than a 1-period gap)
                 soft_scores["idle_time_score"] -= gap
+                soft_details.append(f"GV {lecturer.name} Ngày {day}: Chờ {gap} tiết giữa 2 lớp (lớn)")
                 consecutive_p = e - s + 1
 
             last_e = e
@@ -158,6 +166,7 @@ def evaluate_all_constraints(
             # FIX: Moved check outside the gap==0 branch so it applies after every block update
             if consecutive_p > 5:
                 soft_scores["workload_score"] -= 1
+                soft_details.append(f"GV {lecturer.name} Ngày {day}: Dạy liên tục quá 5 tiết")
                 consecutive_p = 0
 
     return hard_counts, hard_details, soft_scores, soft_details
@@ -298,8 +307,6 @@ def weighted_fitness(
     # CHUẨN HOÁ SOFT-CONSTRAINTS VỀ THANG (0.0 -> 1.0)
     # Vì Soft Score là dạng tổng điểm (+) / phạt trừ biên độ (-), khó kiểm soát cận độ giới hạn.
     # Nên sử dụng đường cong Sigmoid 1 / (1 + e^-x) để làm phẳng và nhét chúng vào khoảng [0, 1].
-    import math
-
     def normalize_sigmoid(val):
         # Ép điểm x nhét vào khoảng (0, 1) giúp dễ dàng weight toán học.
         return 1 / (1 + math.exp(-val))

@@ -24,7 +24,6 @@ def evaluate_all_constraints(
         "workload_score": 0,
         "idle_time_score": 0,
         "movement_score": 0,
-        "capacity_score": 0,
     }
     hard_details = []
     soft_details = []
@@ -131,23 +130,32 @@ def evaluate_all_constraints(
                 last_e = e
                 last_r = r_id
                 consecutive_p = e - s + 1
+                # FIX: Check the very first block for excessive consecutive periods
+                if consecutive_p > 5:
+                    soft_scores["workload_score"] -= 1
+                    consecutive_p = 0
                 continue
 
             gap = s - last_e - 1
+
             if gap == 0:
+                # Consecutive blocks — no idle time
                 consecutive_p += e - s + 1
                 if last_r == r_id:
                     soft_scores["movement_score"] += 1
             elif gap == 1:
-                soft_scores["idle_time_score"] += 1
+                # FIX: A 1-period gap is a minor inconvenience, slight penalty (was +1, which was wrong)
+                soft_scores["idle_time_score"] -= 1
                 consecutive_p = e - s + 1
             else:
-                soft_scores["idle_time_score"] -= 1
+                # FIX: A large gap is a bigger penalty (was -1, which punished less than a 1-period gap)
+                soft_scores["idle_time_score"] -= gap
                 consecutive_p = e - s + 1
 
             last_e = e
             last_r = r_id
 
+            # FIX: Moved check outside the gap==0 branch so it applies after every block update
             if consecutive_p > 5:
                 soft_scores["workload_score"] -= 1
                 consecutive_p = 0
@@ -256,7 +264,7 @@ def weighted_fitness(
     timeslots_dict: dict[int, TimeSlot],
 ):
     """
-    Weighted Fitness (Tổng Trọng Số Tuyến Tính Có Chuẩn Hóa [0 -> 1])
+    Weighted Fitness (Tổng Trọng Số Tuyến Tính Có Chuẩn Hóa [0 -> 1])   
 
     Hoàn toàn đánh giá cá thể TKB theo một tỷ lệ cố định (w_1, w_2, ..., w_n)
     sao cho tích luỹ của toàn bộ weights = 1.0.
@@ -267,22 +275,25 @@ def weighted_fitness(
         chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
     )
 
-    # TRỌNG SỐ CHO HARD CONSTRAINTS (Tổng: 0.5)
-    w_overlap = 0.35  # 35% cho Trùng lịch (Nghiêm trọng nhất)
-    w_time = 0.05  # 5% cho Sai khung giờ
-    w_room_suitability = 0.10
-    
-    # TRỌNG SỐ CHO SOFT CONSTRAINTS (Tổng: 0.50)
-    w_pref = 0.20  # 20% Sở thích ưu tiên
-    w_workload = 0.15  # 15% Khối lượng làm việc liên tục
-    w_idle = 0.10  # 10% Thời gian rảnh rỗi chờ ca dạy
-    w_move = 0.05  # 5% Đổi phòng
+    # TRỌNG SỐ CHO HARD CONSTRAINTS (Tổng: 0.70)
+    w_overlap = 0.40          # 40% cho Trùng lịch (Nghiêm trọng nhất)
+    w_time = 0.10             # 10% cho Sai khung giờ
+    w_room_suitability = 0.10 # 10% cho Loại phòng / Sức chứa
+    w_daily_limit = 0.10      # 10% cho Vượt giới hạn tiết/ngày
+ 
+    # TRỌNG SỐ CHO SOFT CONSTRAINTS (Tổng: 0.30)
+    w_pref = 0.15     # 15% Sở thích ưu tiên
+    w_workload = 0.07 # 7%  Khối lượng làm việc liên tục
+    w_idle = 0.05     # 5%  Thời gian rảnh rỗi chờ ca dạy
+    w_move = 0.03     # 3%  Đổi phòng
+    # Tổng: 0.40 + 0.10 + 0.10 + 0.10 + 0.15 + 0.07 + 0.05 + 0.03 = 1.00
 
     # CHUẨN HOÁ HARD-CONSTRAINTS VỀ THANG (0 -> 1.0]
     # Bản chất: Lỗi càng nhiều (Mẫu số to) thì Giá trị đem nhân Weight càng tụt mất (Gần về 0)
     score_overlap = 1.0 / (1.0 + hard_counts["overlap_violations"])
     score_time = 1.0 / (1.0 + hard_counts["time_violations"])
     score_room_suitability = 1.0 / (1.0 + hard_counts["room_suitability_violations"])
+    score_daily_limit = 1.0 / (1.0 + hard_counts["daily_limit_violations"])
 
     # CHUẨN HOÁ SOFT-CONSTRAINTS VỀ THANG (0.0 -> 1.0)
     # Vì Soft Score là dạng tổng điểm (+) / phạt trừ biên độ (-), khó kiểm soát cận độ giới hạn.
@@ -297,7 +308,6 @@ def weighted_fitness(
     s_workload = normalize_sigmoid(soft_scores["workload_score"])
     s_idle = normalize_sigmoid(soft_scores["idle_time_score"])
     s_move = normalize_sigmoid(soft_scores["movement_score"])
-    s_capacity = normalize_sigmoid(soft_scores["capacity_score"])
 
     # KẾT XUẤT FINAL SCORE [Tổng W là 1.0]
     # Giá trị độ thích nghi cao nhất hoàn hảo của lý thuyết sẽ xấp xỉ là 1.0
@@ -305,6 +315,7 @@ def weighted_fitness(
         (w_overlap * score_overlap)
         + (w_time * score_time)
         + (w_room_suitability * score_room_suitability)
+        + (w_daily_limit * score_daily_limit)
         + (w_pref * s_pref)
         + (w_workload * s_workload)
         + (w_idle * s_idle)

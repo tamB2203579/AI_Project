@@ -46,6 +46,8 @@ def initialize_population(
         genes = generate_semi_greedy_chromosome(sessions, rooms, timeslots)
         population.append(Chromosome(genes=genes))
 
+    random.shuffle(population)
+
     return population, new_courses_dict
 
 
@@ -153,7 +155,7 @@ def generate_greedy_chromosome(sessions, rooms, timeslots):
                 if room_key in room_occupied and room_occupied[room_key] & occupied_periods:
                     continue
 
-                score = evaluate_option(course, room, slot, lecturer_id)
+                score = evaluate_option(course, room)
 
                 if score > best_score:
                     best_score = score
@@ -259,7 +261,7 @@ def generate_semi_greedy_chromosome(sessions, rooms, timeslots):
                 if room_key in room_occupied and room_occupied[room_key] & occupied_periods:
                     continue
 
-                score = evaluate_option(course, room, slot, lecturer_id)
+                score = evaluate_option(course, room)
                 candidates.append((score, room, slot, occupied_periods, lec_key, room_key))
 
         if not candidates:

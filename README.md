@@ -1,0 +1,1 @@
+# LecScheduler - A University Scheduling System using Genetic Algorithm

@@ -12,12 +12,11 @@ def roulette_wheel_selection(
         if isinstance(fitness, tuple):
             return fitness[0] * 1000 + fitness[1]
         return fitness
-    
+
     scalars = [get_scalar(ind.fitness) for ind in population]
     min_fitness = min(scalars)
 
     # Dịch chuyển fitness để đảm bảo tất cả fitness >= 0 (nếu có giá trị âm)
-    # Thêm một lượng nhỏ (epsilon) để đảm bảo cá thể tệ nhất vẫn có xác suất > 0
     shift = 0 if min_fitness >= 0 else abs(min_fitness)
     adjusted_fitnesses = [f + shift + 1e-6 for f in scalars]
 

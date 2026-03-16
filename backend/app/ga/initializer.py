@@ -14,16 +14,7 @@ def initialize_population(
 
     courses = sort_courses(courses)
 
-    # split course -> sessions (with virtual class splitting)
     sessions, new_courses_dict = expand_courses_to_sessions(courses, rooms)
-
-    print("=== SESSIONS ===")
-    for s in sessions:
-        print(
-            "course:", s["course"].courseCode,
-            "| session:", s["session_id"],
-            "| units:", s["units"]
-        )
 
     greedy_size = int(pop_size * 0.3)
     random_size = int(pop_size * 0.4)
@@ -62,24 +53,25 @@ def generate_random_chromosome(sessions, rooms, timeslots):
         units = session["units"]
         session_id = session["session_id"]
 
-        # Use the course's assigned lecturer (not a random one)
         lecturer_id = course.lecturerId
 
         room = random.choice(rooms)
-        
+
         if course.id not in course_days:
             course_days[course.id] = set()
 
         valid_slots = [
-            s for s in timeslots
+            s
+            for s in timeslots
             if s.start_period + units - 1 <= 9
-            and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)  # no morning→afternoon crossing
+            and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
             and s.day not in course_days[course.id]
         ]
 
         if not valid_slots:
             valid_slots = [
-                s for s in timeslots
+                s
+                for s in timeslots
                 if s.start_period + units - 1 <= 9
                 and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
             ]
@@ -103,13 +95,11 @@ def generate_random_chromosome(sessions, rooms, timeslots):
     return genes
 
 
-# GREEDY INIT — tracks occupied slots to avoid overlaps
+# GREEDY INIT
 def generate_greedy_chromosome(sessions, rooms, timeslots):
 
     genes = []
-    # Track occupation: (lecturer_id, day) -> set of occupied periods
     lecturer_occupied = {}
-    # Track occupation: (room_id, day) -> set of occupied periods
     room_occupied = {}
     course_days = {}
 
@@ -121,7 +111,7 @@ def generate_greedy_chromosome(sessions, rooms, timeslots):
 
         best_score = -1
         best_option = None
-        
+
         if course.id not in course_days:
             course_days[course.id] = set()
 
@@ -135,24 +125,30 @@ def generate_greedy_chromosome(sessions, rooms, timeslots):
                 if slot.start_period + units - 1 > 9:
                     continue
 
-                # Check session boundary (morning: 1-5, afternoon: 6-9)
+                # Kiểm tra giới hạn buổi học (buổi sáng: tiết 1-5, buổi chiều: tiết 6-9)
                 start = slot.start_period
                 end = start + units - 1
                 if start <= 5 and end >= 6:
                     continue
-                    
+
                 if slot.day in course_days[course.id]:
                     continue
 
-                # Check lecturer overlap
+                # Kiểm tra trùng lặp giảng viên
                 lec_key = (lecturer_id, slot.day)
                 occupied_periods = set(range(start, end + 1))
-                if lec_key in lecturer_occupied and lecturer_occupied[lec_key] & occupied_periods:
+                if (
+                    lec_key in lecturer_occupied
+                    and lecturer_occupied[lec_key] & occupied_periods
+                ):
                     continue
 
-                # Check room overlap
+                # Kiểm tra trùng lặp phòng học
                 room_key = (room.id, slot.day)
-                if room_key in room_occupied and room_occupied[room_key] & occupied_periods:
+                if (
+                    room_key in room_occupied
+                    and room_occupied[room_key] & occupied_periods
+                ):
                     continue
 
                 score = evaluate_option(course, room)
@@ -162,21 +158,22 @@ def generate_greedy_chromosome(sessions, rooms, timeslots):
                     best_option = (room, slot, occupied_periods, lec_key, room_key)
 
         if best_option is None:
-            # Fallback: random placement if no valid option found
+            # Fallback
             room = random.choice(rooms)
             valid_slots = [
-                s for s in timeslots 
+                s
+                for s in timeslots
                 if s.start_period + units - 1 <= 9
                 and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
                 and s.day not in course_days[course.id]
             ]
             if not valid_slots:
                 valid_slots = [
-                    s for s in timeslots 
+                    s
+                    for s in timeslots
                     if s.start_period + units - 1 <= 9
                     and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
                 ]
-            # timeslots[0] bị bỏ — có thể vi phạm ràng buộc units; dùng safe_fallback thay thế
             if not valid_slots:
                 valid_slots = [s for s in timeslots if s.start_period + units - 1 <= 9]
             slot = random.choice(valid_slots) if valid_slots else timeslots[0]
@@ -190,7 +187,6 @@ def generate_greedy_chromosome(sessions, rooms, timeslots):
         room, slot, occupied_periods, lec_key, room_key = best_option
         course_days[course.id].add(slot.day)
 
-        # Mark occupation
         if lec_key not in lecturer_occupied:
             lecturer_occupied[lec_key] = set()
         lecturer_occupied[lec_key] |= occupied_periods
@@ -228,7 +224,7 @@ def generate_semi_greedy_chromosome(sessions, rooms, timeslots):
         lecturer_id = course.lecturerId
 
         candidates = []
-        
+
         if course.id not in course_days:
             course_days[course.id] = set()
 
@@ -246,40 +242,49 @@ def generate_semi_greedy_chromosome(sessions, rooms, timeslots):
                 end = start + units - 1
                 if start <= 5 and end >= 6:
                     continue
-                    
+
                 if slot.day in course_days[course.id]:
                     continue
 
-                # Check lecturer overlap
+                # Kiểm tra trùng lặp giảng viên
                 lec_key = (lecturer_id, slot.day)
                 occupied_periods = set(range(start, end + 1))
-                if lec_key in lecturer_occupied and lecturer_occupied[lec_key] & occupied_periods:
+                if (
+                    lec_key in lecturer_occupied
+                    and lecturer_occupied[lec_key] & occupied_periods
+                ):
                     continue
 
-                # Check room overlap
+                # Kiểm tra trùng lặp phòng
                 room_key = (room.id, slot.day)
-                if room_key in room_occupied and room_occupied[room_key] & occupied_periods:
+                if (
+                    room_key in room_occupied
+                    and room_occupied[room_key] & occupied_periods
+                ):
                     continue
 
                 score = evaluate_option(course, room)
-                candidates.append((score, room, slot, occupied_periods, lec_key, room_key))
+                candidates.append(
+                    (score, room, slot, occupied_periods, lec_key, room_key)
+                )
 
         if not candidates:
             # Fallback
             room = random.choice(rooms)
             valid_slots = [
-                s for s in timeslots 
+                s
+                for s in timeslots
                 if s.start_period + units - 1 <= 9
                 and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
                 and s.day not in course_days[course.id]
             ]
             if not valid_slots:
                 valid_slots = [
-                    s for s in timeslots 
+                    s
+                    for s in timeslots
                     if s.start_period + units - 1 <= 9
                     and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
                 ]
-            # timeslots[0] bị bỏ — có thể vi phạm ràng buộc units; dùng safe_fallback thay thế
             if not valid_slots:
                 valid_slots = [s for s in timeslots if s.start_period + units - 1 <= 9]
             slot = random.choice(valid_slots) if valid_slots else timeslots[0]
@@ -297,7 +302,6 @@ def generate_semi_greedy_chromosome(sessions, rooms, timeslots):
         _, room, slot, occupied_periods, lec_key, room_key = chosen
         course_days[course.id].add(slot.day)
 
-        # Mark occupation
         if lec_key not in lecturer_occupied:
             lecturer_occupied[lec_key] = set()
         lecturer_occupied[lec_key] |= occupied_periods
@@ -320,7 +324,7 @@ def generate_semi_greedy_chromosome(sessions, rooms, timeslots):
     return genes
 
 
-# SCORING FUNCTION
+# Hàm scoring
 def evaluate_option(course, room):
 
     score = 0
@@ -334,7 +338,7 @@ def evaluate_option(course, room):
     return score
 
 
-# SORT COURSE
+# Sắp xếp học phần
 def sort_courses(courses):
 
     return sorted(

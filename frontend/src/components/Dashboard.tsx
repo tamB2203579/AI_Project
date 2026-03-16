@@ -16,7 +16,7 @@ export function Dashboard() {
         <div className="dashboard">
             <div className="page-header">
                 <h2 className="page-title">Dashboard</h2>
-                <p className="page-description">Overview of your lecturer timetable scheduling system</p>
+                <p className="page-description">Overview of lecturer timetable scheduling system</p>
             </div>
 
             <div className="cards-grid">

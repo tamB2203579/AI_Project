@@ -14,7 +14,40 @@ import type {
   TimeSlot,
   HardConstraints,
   SoftConstraints,
+  ScheduleRequest,
 } from "./types";
+
+export const defaultGAConfig: ScheduleRequest = {
+  fitness: {
+    method: "weighted",
+    base_score: 1000,
+    hard_penalty: 100,
+    soft_bonus: 5,
+    alpha: 1000,
+    beta: 10,
+  },
+  selection: {
+    method: "tournament",
+    tournament_k: 3,
+  },
+  crossover: {
+    method: "single_point",
+    rate: 0.8,
+    n_points: 3,
+  },
+  mutation: {
+    method: "random",
+    rate: 0.1,
+  },
+  ga: {
+    pop_size: 100,
+    elitism_rate: 0.1,
+    max_generations: 500,
+    max_time_seconds: 30,
+    max_stall_generations: 50,
+    target_fitness: null,
+  },
+};
 
 export interface AppState {
   lecturers: Lecturer[];
@@ -29,6 +62,7 @@ export interface AppState {
   timeslots: TimeSlot[];
   hardConstraints: HardConstraints | null;
   softConstraints: SoftConstraints | null;
+  gaConfig: ScheduleRequest;
 }
 
 type Action =
@@ -42,16 +76,20 @@ type Action =
   | { type: "SET_BEST_FITNESS"; payload: number }
   | { type: "SET_PAGE"; payload: string }
   | { type: "ADD_LECTURER"; payload: Lecturer }
+  | { type: "UPDATE_LECTURER"; payload: Lecturer }
   | { type: "REMOVE_LECTURER"; payload: number }
   | { type: "ADD_COURSE"; payload: Course }
+  | { type: "UPDATE_COURSE"; payload: Course }
   | { type: "REMOVE_COURSE"; payload: number }
   | { type: "ADD_ROOM"; payload: Room }
+  | { type: "UPDATE_ROOM"; payload: Room }
   | { type: "REMOVE_ROOM"; payload: number }
   | { type: "RESET_GA" }
   | { type: "LOAD_STATE"; payload: Partial<AppState> }
   | { type: "SET_TIMESLOTS"; payload: TimeSlot[] }
   | { type: "SET_HARD_CONSTRAINTS"; payload: HardConstraints | null }
-  | { type: "SET_SOFT_CONSTRAINTS"; payload: SoftConstraints | null };
+  | { type: "SET_SOFT_CONSTRAINTS"; payload: SoftConstraints | null }
+  | { type: "SET_GA_CONFIG"; payload: ScheduleRequest };
 
 const initialState: AppState = {
   lecturers: [],
@@ -66,6 +104,7 @@ const initialState: AppState = {
   timeslots: [],
   hardConstraints: null,
   softConstraints: null,
+  gaConfig: defaultGAConfig,
 };
 
 function reducer(state: AppState, action: Action): AppState {
@@ -147,6 +186,7 @@ function reducer(state: AppState, action: Action): AppState {
         bestFitness: 0,
         hardConstraints: null,
         softConstraints: null,
+        gaConfig: defaultGAConfig,
       };
 
     case "SET_HARD_CONSTRAINTS":
@@ -154,6 +194,9 @@ function reducer(state: AppState, action: Action): AppState {
 
     case "SET_SOFT_CONSTRAINTS":
       return { ...state, softConstraints: action.payload };
+
+    case "SET_GA_CONFIG":
+      return { ...state, gaConfig: action.payload };
 
     case "LOAD_STATE":
       return { ...state, ...action.payload };

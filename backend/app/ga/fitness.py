@@ -9,11 +9,6 @@ def evaluate_all_constraints(
     rooms_dict: dict[int, Room],
     timeslots_dict: dict[int, TimeSlot],
 ) -> tuple[dict[str, int], list[str], dict[str, int], list[str]]:
-    """
-    Hàm đánh giá CẢ vi phạm nghiêm trọng (Hard Constraints) lẫn điểm thưởng mềm (Soft Constraints).
-    Gộp 2 vòng lặp lớn thành 1 vòng duy nhất quét qua hệ gene.
-    Khử vòng lặp dò trùng lặp tuyến tính (Array Search) bằng Bitwise Integer Check.
-    """
     hard_counts = {
         "overlap_violations": 0,
         "time_violations": 0,
@@ -29,15 +24,11 @@ def evaluate_all_constraints(
     hard_details = []
     soft_details = []
 
-    # Dùng Bitmask để lưu trữ biểu đồ dạy của một GV / Phòng Học
-    # vd: Dạy tiết 1, 2, 3 => Mask = 0b000000111
     lecturer_masks = {}
     room_masks = {}
 
-    # Để suy luận Workload/Movement, chúng ta phải nhóm lại theo GV
     lecturer_schedule_blocks = {}
-    
-    # Track days each course is scheduled to prevent multiple sessions per day
+
     course_days = {}
 
     for gene in chromosome.genes:
@@ -50,80 +41,96 @@ def evaluate_all_constraints(
         end_period = start_period + gene.units - 1
         day = timeslot.day
 
-        # === 1. ĐÁNH GIÁ THỜI GIAN (HARD) === #
+        # ĐÁNH GIÁ THỜI GIAN (HARD)
         if end_period > 9:
             hard_counts["time_violations"] += 1
-            hard_details.append(f"Vượt thời gian: Môn {course.name} {course.courseCode} kết thúc quá tiết 9 (Tiết {end_period})")
+            hard_details.append(
+                f"Vượt thời gian: Môn {course.name} {course.courseCode} kết thúc quá tiết 9 (Tiết {end_period})"
+            )
 
         if start_period <= 5 and end_period >= 6:
             hard_counts["time_violations"] += 1
-            hard_details.append(f"Vắt ngang ca: Môn {course.name} {course.courseCode} bị kẹp giữa ca Sáng/Chiều")
+            hard_details.append(
+                f"Vắt ngang ca: Môn {course.name} {course.courseCode} bị kẹp giữa ca Sáng/Chiều"
+            )
 
-        # === 2. ĐÁNH GIÁ CƠ SỞ VẬT CHẤT (HARD) === #
+        # ĐÁNH GIÁ CƠ SỞ VẬT CHẤT (HARD)
         if room.type not in course.roomType:
             hard_counts["room_suitability_violations"] += 1
-            hard_details.append(f"Loại phòng: Môn {course.name} {course.courseCode} cần {course.roomType}, xếp vào P.{room.id} ({room.type})")
-        
+            hard_details.append(
+                f"Loại phòng: Môn {course.name} {course.courseCode} cần {course.roomType}, xếp vào P.{room.id} ({room.type})"
+            )
+
         if room.capacity < course.studentsCount:
             hard_counts["room_suitability_violations"] += 1
-            hard_details.append(f"Sức chứa: Môn {course.name} {course.courseCode} ({course.studentsCount} sv), xếp vào P.{room.name} (chứa {room.capacity})")
+            hard_details.append(
+                f"Sức chứa: Môn {course.name} {course.courseCode} ({course.studentsCount} sv), xếp vào P.{room.name} (chứa {room.capacity})"
+            )
 
-        # === 3. TRÙNG LẶP MÔN TRONG NGÀY (HARD) === #
+        # TRÙNG LẶP MÔN TRONG NGÀY (HARD)
         if course.id not in course_days:
             course_days[course.id] = set()
-            
+
         if day in course_days[course.id]:
             hard_counts["daily_limit_violations"] += 1
-            hard_details.append(f"Giới hạn ngày: Môn {course.name} {course.courseCode} có nhiều hơn 1 buổi trên Ngày {day}")
-            
+            hard_details.append(
+                f"Giới hạn ngày: Môn {course.name} {course.courseCode} có nhiều hơn 1 buổi trên Ngày {day}"
+            )
+
         course_days[course.id].add(day)
 
-        # === 3. SỞ THÍCH VÀ SỨC CHỨA (SOFT) === #
+        # SỞ THÍCH VÀ SỨC CHỨA (SOFT)
         if day in lecturer.preferenceDay:
             soft_scores["preference_score"] += 1
-            soft_details.append(f"GV {lecturer.name} dạy đúng ngày sở thích (Ngày {day}) — Môn {course.name} {course.courseCode}")
+            soft_details.append(
+                f"GV {lecturer.name} dạy đúng ngày sở thích (Ngày {day}) — Môn {course.name} {course.courseCode}"
+            )
 
-        # === 4. TRÙNG LẶP SỬ DỤNG BITMASK (HARD) === #
-        # Hàm sinh ra chuỗi nhị phân (vd: Start=2, Length=2 -> 0b0000000110)
-        # Bắt đầu tiết 1 (start_period=1) => bit dời = 0.
+        # TRÙNG LẶP SỬ DỤNG BITMASK (HARD)
         period_mask = ((1 << gene.units) - 1) << (start_period - 1)
 
         lecturer_key = (lecturer.id, day)
         room_key = (room.id, day)
 
-        # Trùng lặp Giảng viên
+        # Trùng lặp giảng viên
         if lecturer_key not in lecturer_masks:
             lecturer_masks[lecturer_key] = 0
             lecturer_schedule_blocks[lecturer_key] = []
-        
+
         if lecturer_masks[lecturer_key] & period_mask:
             hard_counts["overlap_violations"] += 1
             hard_details.append(f"GV {lecturer.name} kẹt lịch Ngày {day}")
-        
-        lecturer_masks[lecturer_key] |= period_mask
-        lecturer_schedule_blocks[lecturer_key].append((start_period, end_period, room.id))
 
-        # Trùng lặp Phòng
+        lecturer_masks[lecturer_key] |= period_mask
+        lecturer_schedule_blocks[lecturer_key].append(
+            (start_period, end_period, room.id)
+        )
+
+        # Trùng lặp phòng
         if room_key not in room_masks:
             room_masks[room_key] = 0
-            
+
         if room_masks[room_key] & period_mask:
             hard_counts["overlap_violations"] += 1
             hard_details.append(f"Phòng {room.name} bị trùng lịch Ngày {day}")
-            
+
         room_masks[room_key] |= period_mask
 
-    # === PHÂN TÍCH CHUỖI BLOCK (WORKLOAD / IDLE / MOVEMENT) === #
-    for (lecturer_id, day), schedule in lecturer_schedule_blocks.items():
+    # TÍNH WORKLOAD / IDLE / MOVEMENT
+    for (_, day), schedule in lecturer_schedule_blocks.items():
         schedule.sort(key=lambda x: x[0])
         total_p = sum(e - s + 1 for s, e, _ in schedule)
 
         if total_p <= 8:
             soft_scores["workload_score"] += 1
-            soft_details.append(f"GV {lecturer.name} Ngày {day}: Tải hợp lý ({total_p} tiết)")
+            soft_details.append(
+                f"GV {lecturer.name} Ngày {day}: Tải hợp lý ({total_p} tiết)"
+            )
         else:
             soft_scores["workload_score"] -= 1
-            soft_details.append(f"GV {lecturer.name} Ngày {day}: Quá tải ({total_p} tiết)")
+            soft_details.append(
+                f"GV {lecturer.name} Ngày {day}: Quá tải ({total_p} tiết)"
+            )
 
         consecutive_p = 0
         last_e = -1
@@ -134,42 +141,48 @@ def evaluate_all_constraints(
                 last_e = e
                 last_r = r_id
                 consecutive_p = e - s + 1
-                # FIX: Check the very first block for excessive consecutive periods
                 if consecutive_p > 5:
                     soft_scores["workload_score"] -= 1
-                    soft_details.append(f"GV {lecturer.name} Ngày {day}: Dạy liên tục quá 5 tiết ngay đầu ca")
+                    soft_details.append(
+                        f"GV {lecturer.name} Ngày {day}: Dạy liên tục quá 5 tiết ngay đầu ca"
+                    )
                     consecutive_p = 0
                 continue
 
             gap = s - last_e - 1
 
             if gap == 0:
-                # Consecutive blocks — no idle time
                 consecutive_p += e - s + 1
                 if last_r == r_id:
                     soft_scores["movement_score"] += 1
-                    soft_details.append(f"GV {lecturer.name} Ngày {day}: Dạy liên tiếp cùng phòng P.{room.name}")
+                    soft_details.append(
+                        f"GV {lecturer.name} Ngày {day}: Dạy liên tiếp cùng phòng P.{room.name}"
+                    )
             elif gap == 1:
-                # FIX: A 1-period gap is a minor inconvenience, slight penalty (was +1, which was wrong)
                 soft_scores["idle_time_score"] -= 1
-                soft_details.append(f"GV {lecturer.name} Ngày {day}: Chờ 1 tiết giữa 2 lớp (nhỏ)")
+                soft_details.append(
+                    f"GV {lecturer.name} Ngày {day}: Chờ 1 tiết giữa 2 lớp (nhỏ)"
+                )
                 consecutive_p = e - s + 1
             else:
-                # FIX: A large gap is a bigger penalty (was -1, which punished less than a 1-period gap)
                 soft_scores["idle_time_score"] -= gap
-                soft_details.append(f"GV {lecturer.name} Ngày {day}: Chờ {gap} tiết giữa 2 lớp (lớn)")
+                soft_details.append(
+                    f"GV {lecturer.name} Ngày {day}: Chờ {gap} tiết giữa 2 lớp (lớn)"
+                )
                 consecutive_p = e - s + 1
 
             last_e = e
             last_r = r_id
 
-            # FIX: Moved check outside the gap==0 branch so it applies after every block update
             if consecutive_p > 5:
                 soft_scores["workload_score"] -= 1
-                soft_details.append(f"GV {lecturer.name} Ngày {day}: Dạy liên tục quá 5 tiết")
+                soft_details.append(
+                    f"GV {lecturer.name} Ngày {day}: Dạy liên tục quá 5 tiết"
+                )
                 consecutive_p = 0
 
     return hard_counts, hard_details, soft_scores, soft_details
+
 
 def analyze_solution(
     chromosome: Chromosome,
@@ -199,6 +212,7 @@ def analyze_solution(
         },
     }
 
+
 def penalty_fitness(
     chromosome: Chromosome,
     courses_dict: dict[int, Course],
@@ -209,14 +223,6 @@ def penalty_fitness(
     hard_penalty: int = 100,
     soft_bonus: int = 5,
 ):
-    """
-    Penalty Fitness (Chấm điểm Trừ Phạt Base Score)
-
-    Phương pháp:
-    - Lấy quỹ điểm chuẩn là 1000.
-    - Mỗi vi phạm nghiêm trọng (Hard Constraint) làm trừ đi 100 điểm.
-    - Mỗi một nấc đánh giá đạt của Soft Constraint sẽ cộng thêm 5 điểm bù.
-    """
     hard_counts, _, soft_scores, _ = evaluate_all_constraints(
         chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
     )
@@ -243,14 +249,6 @@ def alpha_beta_fitness(
     alpha: int = 1000,
     beta: int = 10,
 ):
-    """
-    Điểm Thích Nghi Alpha/Beta (Thưởng Phát Không Tuệ Tính)
-
-    Sử dụng tỷ lệ nghịch và trọng số khác biệt cho 2 nhóm Soft và Hard:
-    - Alpha=1000: Scale tối đa nếu NST không dính bất kỳ lỗi HARD nào (Score_Hard = Alpha * 1.0).
-    - Beta=10: Tỷ suất điểm mềm. Tối đa của cá thể cộng sinh thêm từ ưu điểm thời khóa biểu.
-    Công thức: Alpha * (1 / (1 + Sum(HardViols))) + Beta * Sum(Max(0, SoftScore))
-    """
     hard_counts, _, soft_scores, _ = evaluate_all_constraints(
         chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
     )
@@ -272,43 +270,30 @@ def weighted_fitness(
     rooms_dict: dict[int, Room],
     timeslots_dict: dict[int, TimeSlot],
 ):
-    """
-    Weighted Fitness (Tổng Trọng Số Tuyến Tính Có Chuẩn Hóa [0 -> 1])   
-
-    Hoàn toàn đánh giá cá thể TKB theo một tỷ lệ cố định (w_1, w_2, ..., w_n)
-    sao cho tích luỹ của toàn bộ weights = 1.0.
-    Lưu ý: Để việc cộng số học tuyến tính có ý nghĩa, mọi dữ liệu vi phạm cứng/điểm dương mềm
-    đều được ép qua một hàm Sigmoid / Inverse để quy về miền [0 - 1.0].
-    """
     hard_counts, _, soft_scores, _ = evaluate_all_constraints(
         chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
     )
 
-    # TRỌNG SỐ CHO HARD CONSTRAINTS (Tổng: 0.70)
-    w_overlap = 0.40          # 40% cho Trùng lịch (Nghiêm trọng nhất)
-    w_time = 0.10             # 10% cho Sai khung giờ
-    w_room_suitability = 0.10 # 10% cho Loại phòng / Sức chứa
-    w_daily_limit = 0.10      # 10% cho Vượt giới hạn tiết/ngày
- 
-    # TRỌNG SỐ CHO SOFT CONSTRAINTS (Tổng: 0.30)
-    w_pref = 0.15     # 15% Sở thích ưu tiên
-    w_workload = 0.07 # 7%  Khối lượng làm việc liên tục
-    w_idle = 0.05     # 5%  Thời gian rảnh rỗi chờ ca dạy
-    w_move = 0.03     # 3%  Đổi phòng
-    # Tổng: 0.40 + 0.10 + 0.10 + 0.10 + 0.15 + 0.07 + 0.05 + 0.03 = 1.00
+    # Trọng số cho hard constraints (Tổng: 0.70)
+    w_overlap = 0.40
+    w_time = 0.10
+    w_room_suitability = 0.10
+    w_daily_limit = 0.10
 
-    # CHUẨN HOÁ HARD-CONSTRAINTS VỀ THANG (0 -> 1.0]
-    # Bản chất: Lỗi càng nhiều (Mẫu số to) thì Giá trị đem nhân Weight càng tụt mất (Gần về 0)
+    # Trọng số cho soft constraints (Tổng: 0.30)
+    w_pref = 0.15
+    w_workload = 0.07
+    w_idle = 0.05
+    w_move = 0.03
+
+    # Chuẩn hóa hard-constraints về thang (0 -> 1.0]
     score_overlap = 1.0 / (1.0 + hard_counts["overlap_violations"])
     score_time = 1.0 / (1.0 + hard_counts["time_violations"])
     score_room_suitability = 1.0 / (1.0 + hard_counts["room_suitability_violations"])
     score_daily_limit = 1.0 / (1.0 + hard_counts["daily_limit_violations"])
 
-    # CHUẨN HOÁ SOFT-CONSTRAINTS VỀ THANG (0.0 -> 1.0)
-    # Vì Soft Score là dạng tổng điểm (+) / phạt trừ biên độ (-), khó kiểm soát cận độ giới hạn.
-    # Nên sử dụng đường cong Sigmoid 1 / (1 + e^-x) để làm phẳng và nhét chúng vào khoảng [0, 1].
+    # Chuẩn hóa soft-constraints về thang (0.0 -> 1.0)
     def normalize_sigmoid(val):
-        # Ép điểm x nhét vào khoảng (0, 1) giúp dễ dàng weight toán học.
         return 1 / (1 + math.exp(-val))
 
     s_pref = normalize_sigmoid(soft_scores["preference_score"])
@@ -316,8 +301,6 @@ def weighted_fitness(
     s_idle = normalize_sigmoid(soft_scores["idle_time_score"])
     s_move = normalize_sigmoid(soft_scores["movement_score"])
 
-    # KẾT XUẤT FINAL SCORE [Tổng W là 1.0]
-    # Giá trị độ thích nghi cao nhất hoàn hảo của lý thuyết sẽ xấp xỉ là 1.0
     chromosome.fitness = (
         (w_overlap * score_overlap)
         + (w_time * score_time)
@@ -338,14 +321,6 @@ def lexicographic_fitness(
     rooms_dict: dict[int, Room],
     timeslots_dict: dict[int, TimeSlot],
 ):
-    """
-    Lexicographic Fitness (Fitness So Sánh Ưu Tiên Toán Học)
-
-    NST được tính dưới dạng Tuple 2 chiều. Khi GA chạy Tournament/Rank Selection,
-    nếu Tuple (A, B) > (C, D), thì nó ưu tiên số hạng A trước B.
-    => Chỉ số A là lỗi HardConstraint (Để âm để vi phạm lớn sinh ra Tuple nhỏ).
-    => Chỉ số B là điểm cộng SoftConstraint (Nếu A bằng nhau thì B lớn hơn thắng).
-    """
     hard_counts, _, soft_scores, _ = evaluate_all_constraints(
         chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
     )
@@ -353,7 +328,6 @@ def lexicographic_fitness(
     hard_violations = sum(hard_counts.values())
     soft_score = sum(soft_scores.values())
 
-    # Điểm càng ít lỗi âm (Vd: -1 so với -30) thì bộ gene cá thể đó ưu việt hơn.
     chromosome.fitness = (-hard_violations, soft_score)
     return chromosome.fitness
 
@@ -376,4 +350,6 @@ def pick_fitness_method(
     **kwargs,
 ):
     fitness_fn = FITNESS_METHODS.get(method, weighted_fitness)
-    return fitness_fn(chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict, **kwargs)
+    return fitness_fn(
+        chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict, **kwargs
+    )

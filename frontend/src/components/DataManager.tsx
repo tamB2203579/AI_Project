@@ -53,30 +53,53 @@ export function DataManager() {
 function LecturersTab() {
   const { state, dispatch } = useAppState();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [maxUnits, setMaxUnits] = useState(12);
-  // Backend uses 1-indexed days: 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri
   const [days, setDays] = useState<number[]>([1, 2, 3]);
 
-  const handleAdd = async () => {
+  const resetForm = () => {
+    setName("");
+    setMaxUnits(12);
+    setDays([1, 2, 3]);
+    setEditingId(null);
+    setShowForm(false);
+  };
+
+  const openAdd = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  const openEdit = (lec: Lecturer) => {
+    setEditingId(lec.id);
+    setName(lec.name);
+    setMaxUnits(lec.maxUnitPerWeek);
+    setDays(lec.preferenceDay);
+    setShowForm(true);
+  };
+
+  const handleSubmit = async () => {
     if (!name.trim()) return;
 
-    const newLec: Lecturer = {
-      id: Date.now(),
+    const payload: Lecturer = {
+      id: editingId ?? Date.now(),
       name: name.trim(),
       maxUnitPerWeek: maxUnits,
       preferenceDay: days,
     };
 
     try {
-      const res = await lecturerApi.create(newLec);
-      dispatch({ type: "ADD_LECTURER", payload: res.data });
-      setName("");
-      setMaxUnits(12);
-      setDays([1, 2, 3]);
-      setShowForm(false);
+      if (editingId !== null) {
+        const res = await lecturerApi.update(editingId, payload);
+        dispatch({ type: "UPDATE_LECTURER", payload: res.data });
+      } else {
+        const res = await lecturerApi.create(payload);
+        dispatch({ type: "ADD_LECTURER", payload: res.data });
+      }
+      resetForm();
     } catch (err) {
-      console.error("Create lecturer error", err);
+      console.error("Save lecturer error", err);
     }
   };
 
@@ -94,8 +117,8 @@ function LecturersTab() {
   return (
     <div>
       <div className="toolbar">
-        <button className="btn-add" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "✕ Cancel" : "+ Add Lecturer"}
+        <button className="btn-add" onClick={showForm && editingId === null ? resetForm : openAdd}>
+          {showForm && editingId === null ? "✕ Cancel" : "+ Add Lecturer"}
         </button>
       </div>
 
@@ -126,7 +149,7 @@ function LecturersTab() {
             <label>Preferred Days</label>
             <div className="day-selector">
               {DAYS.map((day, i) => {
-                const dayNum = i + 1; // 1-indexed to match backend
+                const dayNum = i + 1;
                 return (
                   <button
                     key={dayNum}
@@ -139,9 +162,14 @@ function LecturersTab() {
               })}
             </div>
           </div>
-          <button className="btn-submit" onClick={handleAdd}>
-            Add Lecturer
-          </button>
+          <div className="form-actions">
+            <button className="btn-submit" onClick={handleSubmit}>
+              {editingId !== null ? "Update Lecturer" : "Add Lecturer"}
+            </button>
+            {editingId !== null && (
+              <button className="btn-cancel" onClick={resetForm} style={{marginLeft: 5}}>Cancel</button>
+            )}
+          </div>
         </div>
       )}
 
@@ -152,14 +180,13 @@ function LecturersTab() {
               <span className="item-name">{lec.name}</span>
               <span className="item-detail">
                 Max {lec.maxUnitPerWeek} units/week · Prefers:{" "}
-                {lec.preferenceDay
-                  .map((d: number) => DAYS[d - 1]?.slice(0, 3))
-                  .join(", ")}
+                {lec.preferenceDay.map((d: number) => DAYS[d - 1]?.slice(0, 3)).join(", ")}
               </span>
             </div>
-            <button className="btn-delete" onClick={() => handleDelete(lec.id)}>
-              🗑️
-            </button>
+            <div className="item-actions">
+              <button className="btn-edit" onClick={() => openEdit(lec)}>✏️</button>
+              <button className="btn-delete" onClick={() => handleDelete(lec.id)}>🗑️</button>
+            </div>
           </div>
         ))}
       </div>
@@ -172,22 +199,49 @@ function LecturersTab() {
 function CoursesTab() {
   const { state, dispatch } = useAppState();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [courseCode, setCourseCode] = useState("");
   const [name, setName] = useState("");
   const [unitsPerWeek, setUnitsPerWeek] = useState(9);
   const [maxUnitsPerDay, setMaxUnitsPerDay] = useState(3);
-  const [lecturerId, setLecturerId] = useState<number>(
-    state.lecturers[0]?.id || 0
-  );
+  const [lecturerId, setLecturerId] = useState<number>(state.lecturers[0]?.id || 0);
   const [students, setStudents] = useState(40);
-  // Backend supports multiple room types as an array: ["Lecture"], ["Lecture","Lab"]
   const [roomTypes, setRoomTypes] = useState<string[]>(["Lecture"]);
 
-  const handleAdd = async () => {
+  const resetForm = () => {
+    setCourseCode("");
+    setName("");
+    setUnitsPerWeek(9);
+    setMaxUnitsPerDay(3);
+    setStudents(40);
+    setRoomTypes(["Lecture"]);
+    setLecturerId(state.lecturers[0]?.id || 0);
+    setEditingId(null);
+    setShowForm(false);
+  };
+
+  const openAdd = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  const openEdit = (course: Course) => {
+    setEditingId(course.id);
+    setCourseCode(course.courseCode);
+    setName(course.name);
+    setUnitsPerWeek(course.unitsPerWeek);
+    setMaxUnitsPerDay(course.maxUnitsPerDay);
+    setStudents(course.studentsCount);
+    setRoomTypes(course.roomType);
+    setLecturerId(course.lecturerId);
+    setShowForm(true);
+  };
+
+  const handleSubmit = async () => {
     if (!name.trim() || !courseCode.trim()) return;
 
-    const newCourse: Course = {
-      id: Date.now(),
+    const payload: Course = {
+      id: editingId ?? Date.now(),
       courseCode: courseCode.trim(),
       name: name.trim(),
       unitsPerWeek,
@@ -198,17 +252,16 @@ function CoursesTab() {
     };
 
     try {
-      const res = await courseApi.create(newCourse);
-      dispatch({ type: "ADD_COURSE", payload: res.data });
-      setCourseCode("");
-      setName("");
-      setUnitsPerWeek(9);
-      setStudents(40);
-      setMaxUnitsPerDay(3);
-      setRoomTypes(["Lecture"]);
-      setShowForm(false);
+      if (editingId !== null) {
+        const res = await courseApi.update(editingId, payload);
+        dispatch({ type: "UPDATE_COURSE", payload: res.data });
+      } else {
+        const res = await courseApi.create(payload);
+        dispatch({ type: "ADD_COURSE", payload: res.data });
+      }
+      resetForm();
     } catch (err) {
-      console.error("Create course error", err);
+      console.error("Save course error", err);
     }
   };
 
@@ -229,8 +282,8 @@ function CoursesTab() {
   return (
     <div>
       <div className="toolbar">
-        <button className="btn-add" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "✕ Cancel" : "+ Add Course"}
+        <button className="btn-add" onClick={showForm && editingId === null ? resetForm : openAdd}>
+          {showForm && editingId === null ? "✕ Cancel" : "+ Add Course"}
         </button>
       </div>
 
@@ -260,7 +313,7 @@ function CoursesTab() {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Units/Week (total periods)</label>
+              <label>Units/Week</label>
               <input
                 type="number"
                 value={unitsPerWeek}
@@ -271,7 +324,7 @@ function CoursesTab() {
               />
             </div>
             <div className="form-group">
-              <label>Max Units/Day (session size)</label>
+              <label>Max Units/Day</label>
               <input
                 type="number"
                 value={maxUnitsPerDay}
@@ -301,15 +354,13 @@ function CoursesTab() {
                 className="input"
               >
                 {state.lecturers.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
-                  </option>
+                  <option key={l.id} value={l.id}>{l.name}</option>
                 ))}
               </select>
             </div>
           </div>
           <div className="form-group">
-            <label>Room Types (select all that apply)</label>
+            <label>Room Types</label>
             <div className="day-selector">
               {ROOM_TYPES.map((t) => (
                 <button
@@ -322,9 +373,14 @@ function CoursesTab() {
               ))}
             </div>
           </div>
-          <button className="btn-submit" onClick={handleAdd}>
-            Add Course
-          </button>
+          <div className="form-actions">
+            <button className="btn-submit" onClick={handleSubmit}>
+              {editingId !== null ? "Update Course" : "Add Course"}
+            </button>
+            {editingId !== null && (
+              <button className="btn-cancel" onClick={resetForm} style={{marginLeft: 5}}>Cancel</button>
+            )}
+          </div>
         </div>
       )}
 
@@ -335,17 +391,15 @@ function CoursesTab() {
             <div className="item-info">
               <span className="item-name">{course.courseCode} – {course.name}</span>
               <span className="item-detail">
-                {getLecturerName(course.lecturerId)} · {course.unitsPerWeek}{" "}
-                units/wk · {course.maxUnitsPerDay}p/session ·{" "}
-                {course.studentsCount} students · {course.roomType.join(", ")}
+                {getLecturerName(course.lecturerId)} · {course.unitsPerWeek} units/wk ·{" "}
+                {course.maxUnitsPerDay}p/session · {course.studentsCount} students ·{" "}
+                {course.roomType.join(", ")}
               </span>
             </div>
-            <button
-              className="btn-delete"
-              onClick={() => handleDelete(course.id)}
-            >
-              🗑️
-            </button>
+            <div className="item-actions">
+              <button className="btn-edit" onClick={() => openEdit(course)}>✏️</button>
+              <button className="btn-delete" onClick={() => handleDelete(course.id)}>🗑️</button>
+            </div>
           </div>
         ))}
       </div>
@@ -358,29 +412,53 @@ function CoursesTab() {
 function RoomsTab() {
   const { state, dispatch } = useAppState();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [capacity, setCapacity] = useState(50);
-  const [type, setType] = useState("Lecture"); // matches backend casing
+  const [type, setType] = useState("Lecture");
 
-  const handleAdd = async () => {
+  const resetForm = () => {
+    setName("");
+    setCapacity(50);
+    setType("Lecture");
+    setEditingId(null);
+    setShowForm(false);
+  };
+
+  const openAdd = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  const openEdit = (room: Room) => {
+    setEditingId(room.id);
+    setName(room.name);
+    setCapacity(room.capacity);
+    setType(room.type);
+    setShowForm(true);
+  };
+
+  const handleSubmit = async () => {
     if (!name.trim()) return;
 
-    const newRoom: Room = {
-      id: Date.now(),
+    const payload: Room = {
+      id: editingId ?? Date.now(),
       name: name.trim(),
       capacity,
       type,
     };
 
     try {
-      const res = await roomApi.create(newRoom);
-      dispatch({ type: "ADD_ROOM", payload: res.data });
-      setName("");
-      setCapacity(50);
-      setType("Lecture");
-      setShowForm(false);
+      if (editingId !== null) {
+        const res = await roomApi.update(editingId, payload);
+        dispatch({ type: "UPDATE_ROOM", payload: res.data });
+      } else {
+        const res = await roomApi.create(payload);
+        dispatch({ type: "ADD_ROOM", payload: res.data });
+      }
+      resetForm();
     } catch (err) {
-      console.error("Create room error", err);
+      console.error("Save room error", err);
     }
   };
 
@@ -389,16 +467,13 @@ function RoomsTab() {
     dispatch({ type: "REMOVE_ROOM", payload: id });
   };
 
-  const typeIcons: Record<string, string> = {
-    Lecture: "🏛️",
-    Lab: "🔬",
-  };
+  const typeIcons: Record<string, string> = { Lecture: "🏛️", Lab: "🔬" };
 
   return (
     <div>
       <div className="toolbar">
-        <button className="btn-add" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "✕ Cancel" : "+ Add Room"}
+        <button className="btn-add" onClick={showForm && editingId === null ? resetForm : openAdd}>
+          {showForm && editingId === null ? "✕ Cancel" : "+ Add Room"}
         </button>
       </div>
 
@@ -434,15 +509,18 @@ function RoomsTab() {
               className="input"
             >
               {ROOM_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
+                <option key={t} value={t}>{t}</option>
               ))}
             </select>
           </div>
-          <button className="btn-submit" onClick={handleAdd}>
-            Add Room
-          </button>
+          <div className="form-actions">
+            <button className="btn-submit" onClick={handleSubmit}>
+              {editingId !== null ? "Update Room" : "Add Room"}
+            </button>
+            {editingId !== null && (
+              <button className="btn-cancel" onClick={resetForm} style={{marginLeft: 5}}>Cancel</button>
+            )}
+          </div>
         </div>
       )}
 
@@ -456,12 +534,10 @@ function RoomsTab() {
                 Capacity: {room.capacity} · Type: {room.type}
               </span>
             </div>
-            <button
-              className="btn-delete"
-              onClick={() => handleDelete(room.id)}
-            >
-              🗑️
-            </button>
+            <div className="item-actions">
+              <button className="btn-edit" onClick={() => openEdit(room)}>✏️</button>
+              <button className="btn-delete" onClick={() => handleDelete(room.id)}>🗑️</button>
+            </div>
           </div>
         ))}
       </div>

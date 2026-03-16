@@ -6,9 +6,9 @@ class StoppingCondition:
     def __init__(
         self,
         max_generations: int = 1000,
-        target_fitness: float = None,  # Tuỳ chọn dừng khi đạt ngưỡng
-        max_time_seconds: int = 30,  # Ví dụ 1 phút thực thi
-        max_stall_generations: int = 50,  # Số thế hệ không cải thiện trước khi kích hoạt chống bão hoà
+        target_fitness: float = None,
+        max_time_seconds: int = 30,
+        max_stall_generations: int = 50,
         base_mutation_rate: float = 0.05,
         max_mutation_rate: float = 1.0,
     ):
@@ -22,13 +22,13 @@ class StoppingCondition:
 
         # State tracking
         self.start_time = None
-        self.best_fitness_ever = None   # None so first comparison always succeeds regardless of fitness type (scalar or tuple)
+        self.best_fitness_ever = None
         self.stall_count = 0
         self.current_mutation_rate = base_mutation_rate
 
     def reset(self):
         self.start_time = time.time()
-        self.best_fitness_ever = None   # Reset to None — same reason as above
+        self.best_fitness_ever = None
         self.stall_count = 0
         self.current_mutation_rate = self.base_mutation_rate
 
@@ -51,7 +51,6 @@ class StoppingCondition:
             )
 
         # Theo dõi sự cải thiện của Fitness
-        # Dùng None-guard để tránh so sánh tuple vs float('-inf') khi dùng lexicographic fitness
         improved = (
             self.best_fitness_ever is None
             or current_best_fitness > self.best_fitness_ever
@@ -65,7 +64,6 @@ class StoppingCondition:
             self.stall_count += 1
 
         # Best fitness đạt ngưỡng mong muốn
-        # Chỉ áp dụng cho scalar — tuple không so sánh được với target_fitness số thực
         if (
             self.target_fitness is not None
             and self.best_fitness_ever is not None
@@ -84,8 +82,7 @@ class StoppingCondition:
                 self.current_mutation_rate = min(
                     self.max_mutation_rate, self.current_mutation_rate + 0.05
                 )
-                # Đặt lại stall_count về nửa ngưỡng: giữ mutation cao thêm max_stall//2 thế hệ
-                # trước khi có thể kích hoạt tăng mutation lần tiếp theo.
+                # Đặt lại stall_count về nửa ngưỡng: giữ mutation cao thêm max_stall//2 thế hệ trước khi có thể kích hoạt tăng mutation lần tiếp theo.
                 self.stall_count = self.max_stall_generations // 2
             else:
                 # Nếu đã max đột biến mà vẫn dậm chân tại chỗ quá lâu (100+ thế hệ), hệ thống cho dừng để tránh lãng phí vòng lặp.

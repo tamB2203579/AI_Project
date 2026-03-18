@@ -77,15 +77,16 @@ class StoppingCondition:
 
         # Cơ chế chống bão hòa (Đột biến thích nghi) / Dừng khi bão hoà quá lâu
         if self.stall_count >= self.max_stall_generations:
-            # Tăng đột biến để nhảy khỏi Local Optima thay vì dừng ngay (bước nhảy ~ 5%)
+            # Tăng đột biến để nhảy khỏi Local Optima thay vì dừng ngay (bước nhảy ~ 2%)
+            # Lưu ý: rate này giờ được áp dụng ở cấp độ nhiễm sắc thể (chromosome) trong mutation.py
             if self.current_mutation_rate < self.max_mutation_rate:
                 self.current_mutation_rate = min(
-                    self.max_mutation_rate, self.current_mutation_rate + 0.05
+                    self.max_mutation_rate, self.current_mutation_rate + 0.02
                 )
-                # Đặt lại stall_count về nửa ngưỡng: giữ mutation cao thêm max_stall//2 thế hệ trước khi có thể kích hoạt tăng mutation lần tiếp theo.
+                # Đặt lại stall_count về nửa ngưỡng
                 self.stall_count = self.max_stall_generations // 2
             else:
-                # Nếu đã max đột biến mà vẫn dậm chân tại chỗ quá lâu (100+ thế hệ), hệ thống cho dừng để tránh lãng phí vòng lặp.
+                # Nếu đã max đột biến mà vẫn dậm chân tại chỗ quá lâu (max_stall * 2), hệ thống cho dừng.
                 if self.stall_count >= self.max_stall_generations * 2:
                     return (
                         True,

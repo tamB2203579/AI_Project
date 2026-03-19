@@ -2,13 +2,13 @@ import math
 from app.schemas import Chromosome, Course, Lecturer, Room, TimeSlot
 
 
-def evaluate_all_constraints(
+def calculate_fitness_fast(
     chromosome: Chromosome,
     courses_dict: dict[int, Course],
     lecturers_dict: dict[int, Lecturer],
     rooms_dict: dict[int, Room],
     timeslots_dict: dict[int, TimeSlot],
-) -> tuple[dict[str, int], list[str], dict[str, int], list[str]]:
+) -> tuple[dict[str, int], dict[str, int]]:
     hard_counts = {
         "overlap_violations": 0,
         "time_violations": 0,
@@ -21,14 +21,10 @@ def evaluate_all_constraints(
         "idle_time_score": 0,
         "movement_score": 0,
     }
-    hard_details = []
-    soft_details = []
 
     lecturer_masks = {}
     room_masks = {}
-
     lecturer_schedule_blocks = {}
-
     course_days = {}
 
     for gene in chromosome.genes:
@@ -41,294 +37,260 @@ def evaluate_all_constraints(
         end_period = start_period + gene.units - 1
         day = timeslot.day
 
-        # ĐÁNH GIÁ THỜI GIAN (HARD)
+        # HARD: Time constraints
         if end_period > 9:
             hard_counts["time_violations"] += 1
-            hard_details.append(
-                f"Vượt thời gian: Môn {course.name} {course.courseCode} kết thúc quá tiết 9 (Tiết {end_period})"
-            )
-
         if start_period <= 5 and end_period >= 6:
             hard_counts["time_violations"] += 1
-            hard_details.append(
-                f"Vắt ngang ca: Môn {course.name} {course.courseCode} bị kẹp giữa ca Sáng/Chiều"
-            )
 
-        # ĐÁNH GIÁ CƠ SỞ VẬT CHẤT (HARD)
+        # HARD: Room constraints
         if room.type not in course.roomType:
             hard_counts["room_suitability_violations"] += 1
-            hard_details.append(
-                f"Loại phòng: Môn {course.name} {course.courseCode} cần {course.roomType}, xếp vào P.{room.id} ({room.type})"
-            )
-
         if room.capacity < course.studentsCount:
             hard_counts["room_suitability_violations"] += 1
-            hard_details.append(
-                f"Sức chứa: Môn {course.name} {course.courseCode} ({course.studentsCount} sv), xếp vào P.{room.name} (chứa {room.capacity})"
-            )
 
-        # TRÙNG LẶP MÔN TRONG NGÀY (HARD)
-        if course.id not in course_days:
-            course_days[course.id] = set()
-
-        if day in course_days[course.id]:
+        # HARD: Daily limit (once per day per course)
+        c_id = gene.course_id
+        if c_id not in course_days:
+            course_days[c_id] = 0
+        
+        # Check if day is already used (using bitmask for days might be overkill but simple)
+        day_bit = 1 << day
+        if course_days[c_id] & day_bit:
             hard_counts["daily_limit_violations"] += 1
-            hard_details.append(
-                f"Giới hạn ngày: Môn {course.name} {course.courseCode} có nhiều hơn 1 buổi trên Ngày {day}"
-            )
+        course_days[c_id] |= day_bit
 
-        course_days[course.id].add(day)
-
-        # SỞ THÍCH VÀ SỨC CHỨA (SOFT)
+        # SOFT: Preference
         if day in lecturer.preferenceDay:
             soft_scores["preference_score"] += 1
-            soft_details.append(
-                f"GV {lecturer.name} dạy đúng ngày sở thích (Ngày {day}) — Môn {course.name} {course.courseCode}"
-            )
 
-        # TRÙNG LẶP SỬ DỤNG BITMASK (HARD)
+        # HARD: Overlap using Bitmasks (Lecturer & Room)
         period_mask = ((1 << gene.units) - 1) << (start_period - 1)
-
-        lecturer_key = (lecturer.id, day)
-        room_key = (room.id, day)
-
-        # Trùng lặp giảng viên
-        if lecturer_key not in lecturer_masks:
-            lecturer_masks[lecturer_key] = 0
-            lecturer_schedule_blocks[lecturer_key] = []
-
-        if lecturer_masks[lecturer_key] & period_mask:
+        
+        lec_key = (gene.lecturer_id, day)
+        if lec_key not in lecturer_masks:
+            lecturer_masks[lec_key] = 0
+            lecturer_schedule_blocks[lec_key] = []
+        
+        if lecturer_masks[lec_key] & period_mask:
             hard_counts["overlap_violations"] += 1
-            hard_details.append(f"GV {lecturer.name} kẹt lịch Ngày {day}")
+        lecturer_masks[lec_key] |= period_mask
+        lecturer_schedule_blocks[lec_key].append((start_period, end_period, gene.room_id))
 
-        lecturer_masks[lecturer_key] |= period_mask
-        lecturer_schedule_blocks[lecturer_key].append(
-            (start_period, end_period, room.id)
-        )
-
-        # Trùng lặp phòng
+        room_key = (gene.room_id, day)
         if room_key not in room_masks:
             room_masks[room_key] = 0
-
         if room_masks[room_key] & period_mask:
             hard_counts["overlap_violations"] += 1
-            hard_details.append(f"Phòng {room.name} bị trùng lịch Ngày {day}")
-
         room_masks[room_key] |= period_mask
 
-    # TÍNH WORKLOAD / IDLE / MOVEMENT
-    for (_, day), schedule in lecturer_schedule_blocks.items():
+    # SOFT: Workload / Idle / Movement
+    for lec_key, schedule in lecturer_schedule_blocks.items():
+        # Sort is required for idle/sequential logic, but keep it local
         schedule.sort(key=lambda x: x[0])
-        total_p = sum(e - s + 1 for s, e, _ in schedule)
-
-        if total_p <= 8:
-            soft_scores["workload_score"] += 1
-            soft_details.append(
-                f"GV {lecturer.name} Ngày {day}: Tải hợp lý ({total_p} tiết)"
-            )
-        else:
-            soft_scores["workload_score"] -= 1
-            soft_details.append(
-                f"GV {lecturer.name} Ngày {day}: Quá tải ({total_p} tiết)"
-            )
-
-        consecutive_p = 0
+        
+        total_periods = 0
         last_e = -1
         last_r = -1
+        consecutive_p = 0
 
         for idx, (s, e, r_id) in enumerate(schedule):
-            if idx == 0:
-                last_e = e
-                last_r = r_id
-                consecutive_p = e - s + 1
-                if consecutive_p > 5:
-                    soft_scores["workload_score"] -= 1
-                    soft_details.append(
-                        f"GV {lecturer.name} Ngày {day}: Dạy liên tục quá 5 tiết ngay đầu ca"
-                    )
-                    consecutive_p = 0
-                continue
-
-            gap = s - last_e - 1
-
-            if gap == 0:
-                consecutive_p += e - s + 1
-                if last_r == r_id:
-                    soft_scores["movement_score"] += 1
-                    soft_details.append(
-                        f"GV {lecturer.name} Ngày {day}: Dạy liên tiếp cùng phòng P.{room.name}"
-                    )
-            elif gap == 1:
-                soft_scores["idle_time_score"] -= 1
-                soft_details.append(
-                    f"GV {lecturer.name} Ngày {day}: Chờ 1 tiết giữa 2 lớp (nhỏ)"
-                )
-                consecutive_p = e - s + 1
+            dur = e - s + 1
+            total_periods += dur
+            
+            if idx > 0:
+                gap = s - last_e - 1
+                if gap == 0:
+                    consecutive_p += dur
+                    if last_r == r_id:
+                        soft_scores["movement_score"] += 1
+                else:
+                    if gap == 1:
+                        soft_scores["idle_time_score"] -= 1
+                    else:
+                        soft_scores["idle_time_score"] -= gap
+                    consecutive_p = dur
             else:
-                soft_scores["idle_time_score"] -= gap
-                soft_details.append(
-                    f"GV {lecturer.name} Ngày {day}: Chờ {gap} tiết giữa 2 lớp (lớn)"
-                )
-                consecutive_p = e - s + 1
-
-            last_e = e
-            last_r = r_id
+                consecutive_p = dur
 
             if consecutive_p > 5:
                 soft_scores["workload_score"] -= 1
-                soft_details.append(
-                    f"GV {lecturer.name} Ngày {day}: Dạy liên tục quá 5 tiết"
-                )
-                consecutive_p = 0
+            
+            last_e = e
+            last_r = r_id
+
+        if total_periods <= 8:
+            soft_scores["workload_score"] += 1
+        else:
+            soft_scores["workload_score"] -= 1
+
+    return hard_counts, soft_scores
+
+
+def evaluate_details(
+    chromosome: Chromosome,
+    courses_dict: dict[int, Course],
+    lecturers_dict: dict[int, Lecturer],
+    rooms_dict: dict[int, Room],
+    timeslots_dict: dict[int, TimeSlot],
+) -> tuple[dict[str, int], list[str], dict[str, int], list[str]]:
+    hard_counts = {"overlap_violations": 0, "time_violations": 0, "room_suitability_violations": 0, "daily_limit_violations": 0}
+    soft_scores = {"preference_score": 0, "workload_score": 0, "idle_time_score": 0, "movement_score": 0}
+    hard_details = []
+    soft_details = []
+
+    lecturer_masks = {}
+    room_masks = {}
+    lecturer_schedule_blocks = {}
+    course_days = {}
+
+    for gene in chromosome.genes:
+        course = courses_dict[gene.course_id]
+        lecturer = lecturers_dict[gene.lecturer_id]
+        room = rooms_dict[gene.room_id]
+        timeslot = timeslots_dict[gene.timeslot_id]
+
+        start_p = timeslot.start_period
+        end_p = start_p + gene.units - 1
+        day = timeslot.day
+
+        if end_p > 9:
+            hard_counts["time_violations"] += 1
+            hard_details.append(f"Vượt thời gian: Môn {course.name} kết thúc quá tiết 9 (Tiết {end_p})")
+        if start_p <= 5 and end_p >= 6:
+            hard_counts["time_violations"] += 1
+            hard_details.append(f"Vắt ngang ca: Môn {course.name} bị kẹp giữa ca Sáng/Chiều")
+
+        if room.type not in course.roomType:
+            hard_counts["room_suitability_violations"] += 1
+            hard_details.append(f"Loại phòng: Môn {course.name} cần {course.roomType}, xếp vào P.{room.id} ({room.type})")
+        if room.capacity < course.studentsCount:
+            hard_counts["room_suitability_violations"] += 1
+            hard_details.append(f"Sức chứa: Môn {course.name} ({course.studentsCount} sv), xếp vào P.{room.name} (chứa {room.capacity})")
+
+        if course.id not in course_days: course_days[course.id] = set()
+        if day in course_days[course.id]:
+            hard_counts["daily_limit_violations"] += 1
+            hard_details.append(f"Giới hạn ngày: Môn {course.name} có nhiều hơn 1 buổi trên Ngày {day}")
+        course_days[course.id].add(day)
+
+        if day in lecturer.preferenceDay:
+            soft_scores["preference_score"] += 1
+            soft_details.append(f"GV {lecturer.name} dạy đúng ngày sở thích (Ngày {day})")
+
+        period_mask = ((1 << gene.units) - 1) << (start_p - 1)
+        l_key = (lecturer.id, day)
+        if l_key not in lecturer_masks:
+            lecturer_masks[l_key] = 0
+            lecturer_schedule_blocks[l_key] = []
+        if lecturer_masks[l_key] & period_mask:
+            hard_counts["overlap_violations"] += 1
+            hard_details.append(f"GV {lecturer.name} kẹt lịch Ngày {day}")
+        lecturer_masks[l_key] |= period_mask
+        lecturer_schedule_blocks[l_key].append((start_p, end_p, room.id, lecturer.name))
+
+        r_key = (room.id, day)
+        if r_key not in room_masks: room_masks[r_key] = 0
+        if room_masks[r_key] & period_mask:
+            hard_counts["overlap_violations"] += 1
+            hard_details.append(f"Phòng {room.name} bị trùng lịch Ngày {day}")
+        room_masks[r_key] |= period_mask
+
+    for (l_id, day), schedule in lecturer_schedule_blocks.items():
+        schedule.sort(key=lambda x: x[0])
+        l_name = schedule[0][3]
+        total_p = sum(e - s + 1 for s, e, _, _ in schedule)
+        if total_p <= 8:
+            soft_scores["workload_score"] += 1
+            soft_details.append(f"GV {l_name} Ngày {day}: Tải hợp lý ({total_p} tiết)")
+        else:
+            soft_scores["workload_score"] -= 1
+            soft_details.append(f"GV {l_name} Ngày {day}: Quá tải ({total_p} tiết)")
+
+        last_e, last_r = -1, -1
+        consecutive_p = 0
+        for idx, (s, e, r_id, _) in enumerate(schedule):
+            dur = e - s + 1
+            if idx == 0:
+                consecutive_p = dur
+            else:
+                gap = s - last_e - 1
+                if gap == 0:
+                    consecutive_p += dur
+                    if last_r == r_id:
+                        soft_scores["movement_score"] += 1
+                        soft_details.append(f"GV {l_name} Ngày {day}: Cùng phòng P.{r_id}")
+                else:
+                    consecutive_p = dur
+                    if gap == 1:
+                        soft_scores["idle_time_score"] -= 1
+                        soft_details.append(f"GV {l_name} Ngày {day}: Chờ 1 tiết")
+                    else:
+                        soft_scores["idle_time_score"] -= gap
+                        soft_details.append(f"GV {l_name} Ngày {day}: Chờ {gap} tiết")
+            last_e, last_r = e, r_id
+            if consecutive_p > 5:
+                soft_scores["workload_score"] -= 1
+                soft_details.append(f"GV {l_name} Ngày {day}: Dạy liên tục {consecutive_p} tiết")
 
     return hard_counts, hard_details, soft_scores, soft_details
 
 
-def analyze_solution(
-    chromosome: Chromosome,
-    courses_dict,
-    lecturers_dict,
-    rooms_dict,
-    timeslots_dict,
-):
-    hard_counts, hard_details, soft_scores, soft_details = evaluate_all_constraints(
-        chromosome,
-        courses_dict,
-        lecturers_dict,
-        rooms_dict,
-        timeslots_dict,
+def analyze_solution(chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict):
+    h_counts, h_details, s_scores, s_details = evaluate_details(
+        chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
     )
-
     return {
-        "hard_constraints": {
-            "total_violations": sum(hard_counts.values()),
-            "by_type": hard_counts,
-            "details": hard_details,
-        },
-        "soft_constraints": {
-            "total_score": sum(soft_scores.values()),
-            "by_type": soft_scores,
-            "details": soft_details,
-        },
+        "hard_constraints": {"total_violations": sum(h_counts.values()), "by_type": h_counts, "details": h_details},
+        "soft_constraints": {"total_score": sum(s_scores.values()), "by_type": s_scores, "details": s_details},
     }
 
 
-def penalty_fitness(
-    chromosome: Chromosome,
-    courses_dict: dict[int, Course],
-    lecturers_dict: dict[int, Lecturer],
-    rooms_dict: dict[int, Room],
-    timeslots_dict: dict[int, TimeSlot],
-    base_score: int = 1000,
-    hard_penalty: int = 100,
-    soft_bonus: int = 5,
-):
-    hard_counts, _, soft_scores, _ = evaluate_all_constraints(
-        chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
-    )
-
-    hard_violations = sum(hard_counts.values())
-    soft_score = sum(soft_scores.values())
-
-    # 1 lỗi cứng = mất x điểm
-    penalty = hard_violations * hard_penalty
-
-    # Cộng dồn điểm mềm * tỷ lệ thưởng
-    bonus = soft_score * soft_bonus
-
-    chromosome.fitness = base_score - penalty + bonus
+def penalty_fitness(chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict, **kwargs):
+    h_counts, s_scores = calculate_fitness_fast(chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict)
+    penalty = sum(h_counts.values()) * kwargs.get("hard_penalty", 100)
+    bonus = sum(s_scores.values()) * kwargs.get("soft_bonus", 5)
+    chromosome.fitness = kwargs.get("base_score", 1000) - penalty + bonus
     return chromosome.fitness
 
 
-def alpha_beta_fitness(
-    chromosome: Chromosome,
-    courses_dict: dict[int, Course],
-    lecturers_dict: dict[int, Lecturer],
-    rooms_dict: dict[int, Room],
-    timeslots_dict: dict[int, TimeSlot],
-    alpha: int = 1000,
-    beta: int = 10,
-):
-    hard_counts, _, soft_scores, _ = evaluate_all_constraints(
-        chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
-    )
-
-    hard_violations = sum(hard_counts.values())
-    soft_score = sum(soft_scores.values())
-
-    score_hard = alpha * (1 / (1 + hard_violations))
-    score_soft = beta * max(0, soft_score)
-
+def alpha_beta_fitness(chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict, **kwargs):
+    h_counts, s_scores = calculate_fitness_fast(chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict)
+    score_hard = kwargs.get("alpha", 1000) * (1 / (1 + sum(h_counts.values())))
+    score_soft = kwargs.get("beta", 10) * max(0, sum(s_scores.values()))
     chromosome.fitness = score_hard + score_soft
     return chromosome.fitness
 
 
-def weighted_fitness(
-    chromosome: Chromosome,
-    courses_dict: dict[int, Course],
-    lecturers_dict: dict[int, Lecturer],
-    rooms_dict: dict[int, Room],
-    timeslots_dict: dict[int, TimeSlot],
-):
-    hard_counts, _, soft_scores, _ = evaluate_all_constraints(
-        chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
+def weighted_fitness(chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict, **kwargs):
+    h_counts, s_scores = calculate_fitness_fast(chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict)
+    
+    # Weights
+    w_hard = {"overlap": 0.40, "time": 0.10, "room": 0.10, "daily": 0.10}
+    w_soft = {"pref": 0.15, "work": 0.07, "idle": 0.05, "move": 0.03}
+
+    score_h = (
+        w_hard["overlap"] * (1.0 / (1.0 + h_counts["overlap_violations"])) +
+        w_hard["time"] * (1.0 / (1.0 + h_counts["time_violations"])) +
+        w_hard["room"] * (1.0 / (1.0 + h_counts["room_suitability_violations"])) +
+        w_hard["daily"] * (1.0 / (1.0 + h_counts["daily_limit_violations"]))
     )
 
-    # Trọng số cho hard constraints (Tổng: 0.70)
-    w_overlap = 0.40
-    w_time = 0.10
-    w_room_suitability = 0.10
-    w_daily_limit = 0.10
-
-    # Trọng số cho soft constraints (Tổng: 0.30)
-    w_pref = 0.15
-    w_workload = 0.07
-    w_idle = 0.05
-    w_move = 0.03
-
-    # Chuẩn hóa hard-constraints về thang (0 -> 1.0]
-    score_overlap = 1.0 / (1.0 + hard_counts["overlap_violations"])
-    score_time = 1.0 / (1.0 + hard_counts["time_violations"])
-    score_room_suitability = 1.0 / (1.0 + hard_counts["room_suitability_violations"])
-    score_daily_limit = 1.0 / (1.0 + hard_counts["daily_limit_violations"])
-
-    # Chuẩn hóa soft-constraints về thang (0.0 -> 1.0)
-    def normalize_sigmoid(val):
-        return 1 / (1 + math.exp(-val))
-
-    s_pref = normalize_sigmoid(soft_scores["preference_score"])
-    s_workload = normalize_sigmoid(soft_scores["workload_score"])
-    s_idle = normalize_sigmoid(soft_scores["idle_time_score"])
-    s_move = normalize_sigmoid(soft_scores["movement_score"])
-
-    chromosome.fitness = (
-        (w_overlap * score_overlap)
-        + (w_time * score_time)
-        + (w_room_suitability * score_room_suitability)
-        + (w_daily_limit * score_daily_limit)
-        + (w_pref * s_pref)
-        + (w_workload * s_workload)
-        + (w_idle * s_idle)
-        + (w_move * s_move)
+    def sig(v): return 1 / (1 + math.exp(-v))
+    score_s = (
+        w_soft["pref"] * sig(s_scores["preference_score"]) +
+        w_soft["work"] * sig(s_scores["workload_score"]) +
+        w_soft["idle"] * sig(s_scores["idle_time_score"]) +
+        w_soft["move"] * sig(s_scores["movement_score"])
     )
+
+    chromosome.fitness = score_h + score_s
     return chromosome.fitness
 
 
-def lexicographic_fitness(
-    chromosome: Chromosome,
-    courses_dict: dict[int, Course],
-    lecturers_dict: dict[int, Lecturer],
-    rooms_dict: dict[int, Room],
-    timeslots_dict: dict[int, TimeSlot],
-):
-    hard_counts, _, soft_scores, _ = evaluate_all_constraints(
-        chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict
-    )
-
-    hard_violations = sum(hard_counts.values())
-    soft_score = sum(soft_scores.values())
-
-    chromosome.fitness = (-hard_violations, soft_score)
+def lexicographic_fitness(chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict, **kwargs):
+    h_counts, s_scores = calculate_fitness_fast(chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict)
+    chromosome.fitness = (-sum(h_counts.values()), sum(s_scores.values()))
     return chromosome.fitness
 
 
@@ -339,17 +301,7 @@ FITNESS_METHODS = {
     "lexicographic": lexicographic_fitness,
 }
 
-
-def pick_fitness_method(
-    chromosome: Chromosome,
-    courses_dict: dict[int, Course],
-    lecturers_dict: dict[int, Lecturer],
-    rooms_dict: dict[int, Room],
-    timeslots_dict: dict[int, TimeSlot],
-    method: str = "weighted",
-    **kwargs,
-):
-    fitness_fn = FITNESS_METHODS.get(method, weighted_fitness)
-    return fitness_fn(
+def pick_fitness_method(chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict, method="weighted", **kwargs):
+    return FITNESS_METHODS.get(method, weighted_fitness)(
         chromosome, courses_dict, lecturers_dict, rooms_dict, timeslots_dict, **kwargs
     )

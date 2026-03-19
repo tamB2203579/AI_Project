@@ -9,7 +9,7 @@ export function Dashboard() {
     const cards = [
         { label: 'Lecturers', value: state.lecturers.length, color: '#1f5ca9', sub: 'Faculty members' },
         { label: 'Courses', value: state.courses.length, color: '#00afef', sub: `${totalUnits} units/week total` },
-        { label: 'Rooms', value: state.rooms.length, color: '#0ea5e9', sub: 'Available spaces' },
+        { label: 'Rooms', value: state.rooms.length, color: '#0ea5e9', sub: 'Available rooms' },
     ];
 
     return (
@@ -63,7 +63,7 @@ export function Dashboard() {
                     <div className="step-card">
                         <div className="step-number">2</div>
                         <h4>Generate</h4>
-                        <p>Run the backend algorithm to optimize and generate a conflict-free timetable.</p>
+                        <p>Run the GA algorithm to optimize and generate a minimize conflict timetable.</p>
                     </div>
                     <div className="step-card">
                         <div className="step-number">3</div>

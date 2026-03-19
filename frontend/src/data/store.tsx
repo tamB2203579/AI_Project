@@ -41,10 +41,9 @@ export const defaultGAConfig: ScheduleRequest = {
   },
   ga: {
     pop_size: 100,
-    elitism_rate: 0.1,
+    elitism_rate: 0.05,
     max_generations: 500,
     max_time_seconds: 30,
-    max_stall_generations: 50,
     target_fitness: null,
   },
 };
@@ -89,7 +88,7 @@ type Action =
   | { type: "SET_TIMESLOTS"; payload: TimeSlot[] }
   | { type: "SET_HARD_CONSTRAINTS"; payload: HardConstraints | null }
   | { type: "SET_SOFT_CONSTRAINTS"; payload: SoftConstraints | null }
-  | { type: "SET_GA_CONFIG"; payload: ScheduleRequest };
+  | { type: "SET_GA_CONFIG"; payload: ScheduleRequest }
 
 const initialState: AppState = {
   lecturers: [],
@@ -146,6 +145,12 @@ function reducer(state: AppState, action: Action): AppState {
         lecturers: [...state.lecturers, action.payload]
       };
 
+    case "UPDATE_LECTURER":
+      return {
+        ...state,
+        lecturers: state.lecturers.map(l => l.id === action.payload.id ? action.payload : l)
+      };
+
     case "REMOVE_LECTURER":
       return {
         ...state,
@@ -158,6 +163,12 @@ function reducer(state: AppState, action: Action): AppState {
         courses: [...state.courses, action.payload]
       };
 
+    case "UPDATE_COURSE":
+      return {
+        ...state,
+        courses: state.courses.map(c => c.id === action.payload.id ? action.payload : c)
+      };
+
     case "REMOVE_COURSE":
       return {
         ...state,
@@ -168,6 +179,12 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         rooms: [...state.rooms, action.payload]
+      };
+
+    case "UPDATE_ROOM":
+      return {
+        ...state,
+        rooms: state.rooms.map(r => r.id === action.payload.id ? action.payload : r)
       };
 
     case "REMOVE_ROOM":

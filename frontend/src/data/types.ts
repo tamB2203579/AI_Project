@@ -70,7 +70,7 @@ export interface GAResult {
 // --- GA configuration types matching backend ScheduleRequest ---
 
 export interface FitnessConfig {
-    method: string;       // "weighted" | "penalty" | "alpha_beta" | "lexicographic"
+    method: string;       // "weighted" | "penalty" | "alpha_beta" | "lexicographic" | "traditional"
     base_score: number;
     hard_penalty: number;
     soft_bonus: number;
@@ -99,7 +99,6 @@ export interface GARunConfig {
     elitism_rate: number;
     max_generations: number;
     max_time_seconds: number;
-    max_stall_generations: number;
     target_fitness: number | null;
 }
 
@@ -119,23 +118,16 @@ export const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 // Periods 1-5 = Morning, 6-9 = Afternoon
 export const PERIODS_PER_DAY = 9;
 
-// Fallback TIME_SLOTS for display purposes (will be overridden by backend data)
-export const TIME_SLOTS: TimeSlot[] = Array.from({ length: 5 }, (_, dayIdx) =>
-  Array.from({ length: PERIODS_PER_DAY }, (_, periodIdx) => ({
-    id: dayIdx * PERIODS_PER_DAY + periodIdx + 1,
-    day: dayIdx,                  // 0=Mon … 4=Fri
-    start_period: periodIdx + 1,  // 1–9
-  }))
-).flat();
-
 export const PERIOD_TIME = [
-  { start: "07:00", end: "07:50" },
-  { start: "07:50", end: "08:40" },
-  { start: "08:50", end: "09:40" },
-  { start: "09:50", end: "10:40" },
-  { start: "10:40", end: "11:30" },
-  { start: "13:30", end: "14:20" },
-  { start: "14:20", end: "15:10" },
-  { start: "15:20", end: "16:10" },
-  { start: "16:10", end: "17:00" },
+    { start: "07:00", end: "07:50" },
+    { start: "07:50", end: "08:40" },
+    { start: "08:50", end: "09:40" },
+    { start: "09:50", end: "10:40" },
+    { start: "10:40", end: "11:30" },
+    { start: "13:30", end: "14:20" },
+    { start: "14:20", end: "15:10" },
+    { start: "15:20", end: "16:10" },
+    { start: "16:10", end: "17:00" },
 ];
+
+

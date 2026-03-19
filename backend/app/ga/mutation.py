@@ -1,26 +1,36 @@
 import random
 
 
-def random_reassignment_mutation(gene, rooms, timeslots, courses_dict=None):
+def random_reassignment_mutation(gene, rooms, timeslots, courses_dict=None, valid_slots_by_units=None, valid_rooms_by_course_id=None):
     mutate_type = random.choice(["timeslot", "room"])
 
     if mutate_type == "timeslot":
-        valid_slots = [
-            s
-            for s in timeslots
-            if s.start_period + gene.units - 1 <= 9
-            and s.id != gene.timeslot_id
-            and not (s.start_period <= 5 and s.start_period + gene.units - 1 >= 6)
-        ]
+        if valid_slots_by_units:
+            valid_slots = [
+                s
+                for s in valid_slots_by_units.get(gene.units, [])
+                if s.id != gene.timeslot_id
+            ]
+        else:
+            valid_slots = [
+                s
+                for s in timeslots
+                if s.start_period + gene.units - 1 <= 9
+                and s.id != gene.timeslot_id
+                and not (s.start_period <= 5 and s.start_period + gene.units - 1 >= 6)
+            ]
         if valid_slots:
             gene.timeslot_id = random.choice(valid_slots).id
             return True
 
     elif mutate_type == "room":
-        valid_rooms = [r for r in rooms if r.id != gene.room_id]
-        if courses_dict:
-            course = courses_dict[gene.course_id]
-            valid_rooms = [r for r in valid_rooms if r.capacity >= course.studentsCount]
+        if valid_rooms_by_course_id:
+            valid_rooms = [r for r in valid_rooms_by_course_id.get(gene.course_id, []) if r.id != gene.room_id]
+        else:
+            valid_rooms = [r for r in rooms if r.id != gene.room_id]
+            if courses_dict:
+                course = courses_dict[gene.course_id]
+                valid_rooms = [r for r in valid_rooms if r.capacity >= course.studentsCount]
 
         if valid_rooms:
             gene.room_id = random.choice(valid_rooms).id
@@ -47,20 +57,30 @@ def swap_mutation(chromosome):
     return True
 
 
-def creep_mutation(gene, timeslots):
+def creep_mutation(gene, timeslots, valid_slots_by_units=None):
     current_slot = next((s for s in timeslots if s.id == gene.timeslot_id), None)
     if not current_slot:
         return False
 
-    valid_creeps = [
-        s
-        for s in timeslots
-        if s.day == current_slot.day
-        and s.start_period + gene.units - 1 <= 9
-        and s.id != current_slot.id
-        and abs(s.start_period - current_slot.start_period) <= 2
-        and not (s.start_period <= 5 and s.start_period + gene.units - 1 >= 6)
-    ]
+    if valid_slots_by_units:
+        base_slots = valid_slots_by_units.get(gene.units, [])
+        valid_creeps = [
+            s
+            for s in base_slots
+            if s.day == current_slot.day
+            and s.id != current_slot.id
+            and abs(s.start_period - current_slot.start_period) <= 2
+        ]
+    else:
+        valid_creeps = [
+            s
+            for s in timeslots
+            if s.day == current_slot.day
+            and s.start_period + gene.units - 1 <= 9
+            and s.id != current_slot.id
+            and abs(s.start_period - current_slot.start_period) <= 2
+            and not (s.start_period <= 5 and s.start_period + gene.units - 1 >= 6)
+        ]
 
     if valid_creeps:
         gene.timeslot_id = random.choice(valid_creeps).id
@@ -76,6 +96,8 @@ def heuristic_mutation(
     lecturers_dict,
     rooms_dict,
     timeslots_dict,
+    valid_slots_by_units=None,
+    valid_rooms_by_course_id=None,
 ):
     faulty_genes = []
 
@@ -125,7 +147,11 @@ def heuristic_mutation(
         target_genes = random.sample(faulty_genes, num_to_fix)
 
         for gene in target_genes:
-            random_reassignment_mutation(gene, rooms, timeslots, courses_dict)
+            random_reassignment_mutation(
+                gene, rooms, timeslots, courses_dict,
+                valid_slots_by_units=valid_slots_by_units,
+                valid_rooms_by_course_id=valid_rooms_by_course_id
+            )
             mutations_done += 1
 
     return mutations_done
@@ -140,6 +166,10 @@ def mutate_population(
     mutation_rate=0.05,
     **kwargs,
 ):
+    valid_slots_by_units = kwargs.get("valid_slots_by_units")
+    valid_rooms_by_course_id = kwargs.get("valid_rooms_by_course_id")
+    courses_dict = kwargs.get("courses_dict")
+
     for chromosome in population:
         if method == "swap":
             if random.random() < mutation_rate:
@@ -151,19 +181,22 @@ def mutate_population(
                     chromosome,
                     rooms,
                     timeslots,
-                    kwargs.get("courses_dict"),
+                    courses_dict,
                     kwargs.get("lecturers_dict"),
                     kwargs.get("rooms_dict"),
                     kwargs.get("timeslots_dict"),
+                    valid_slots_by_units=valid_slots_by_units,
+                    valid_rooms_by_course_id=valid_rooms_by_course_id,
                 )
         else:
-            courses_dict = kwargs.get("courses_dict")
             for gene in chromosome.genes:
                 if random.random() < mutation_rate:
                     if method == "random":
                         random_reassignment_mutation(
-                            gene, rooms, timeslots, courses_dict
+                            gene, rooms, timeslots, courses_dict,
+                            valid_slots_by_units=valid_slots_by_units,
+                            valid_rooms_by_course_id=valid_rooms_by_course_id
                         )
                     elif method == "creep":
-                        creep_mutation(gene, timeslots)
+                        creep_mutation(gene, timeslots, valid_slots_by_units=valid_slots_by_units)
     return population

@@ -29,7 +29,7 @@ export function ConflictPanel() {
             <div className="conflict-header">
                 <span className="conflict-icon">⚡</span>
                 <h3>Constraint Report</h3>
-                <span className="fitness-badge">Fitness: {state.bestFitness}</span>
+                <span className="fitness-badge">Fitness: {state.bestFitness.toFixed(4)}</span>
             </div>
 
             {hasHardViolations && hard && (
@@ -54,11 +54,11 @@ export function ConflictPanel() {
                     </div>
                     {hard.details.length > 0 && (
                         <div style={{ marginTop: '8px', fontSize: '12px', color: '#94a3b8' }}>
-                            {hard.details.slice(0, 10).map((d, i) => (
+                            {hard.details.slice(0, 20).map((d, i) => (
                                 <div key={i}>• {d}</div>
                             ))}
-                            {hard.details.length > 10 && (
-                                <div>...and {hard.details.length - 10} more</div>
+                            {hard.details.length > 20 && (
+                                <div>...and {hard.details.length - 20} more</div>
                             )}
                         </div>
                     )}

@@ -10,6 +10,8 @@ def initialize_population(
     courses,
     rooms,
     timeslots,
+    valid_slots_by_units=None,
+    valid_rooms_by_course_id=None,
 ):
 
     courses = sort_courses(courses)
@@ -24,17 +26,17 @@ def initialize_population(
 
     # Greedy
     for _ in range(greedy_size):
-        genes = generate_greedy_chromosome(sessions, rooms, timeslots)
+        genes = generate_greedy_chromosome(sessions, rooms, timeslots, valid_slots_by_units, valid_rooms_by_course_id)
         population.append(Chromosome(genes=genes))
 
     # Random
     for _ in range(random_size):
-        genes = generate_random_chromosome(sessions, rooms, timeslots)
+        genes = generate_random_chromosome(sessions, rooms, timeslots, valid_slots_by_units, valid_rooms_by_course_id)
         population.append(Chromosome(genes=genes))
 
     # Semi Greedy
     for _ in range(semi_size):
-        genes = generate_semi_greedy_chromosome(sessions, rooms, timeslots)
+        genes = generate_semi_greedy_chromosome(sessions, rooms, timeslots, valid_slots_by_units, valid_rooms_by_course_id)
         population.append(Chromosome(genes=genes))
 
     random.shuffle(population)
@@ -43,7 +45,7 @@ def initialize_population(
 
 
 # RANDOM INIT
-def generate_random_chromosome(sessions, rooms, timeslots):
+def generate_random_chromosome(sessions, rooms, timeslots, valid_slots_by_units=None, valid_rooms_by_course_id=None):
 
     genes = []
     course_days = {}
@@ -55,28 +57,37 @@ def generate_random_chromosome(sessions, rooms, timeslots):
 
         lecturer_id = course.lecturerId
 
-        room = random.choice(rooms)
+        # Use pre-computed rooms if available
+        available_rooms = valid_rooms_by_course_id.get(course.id, rooms) if valid_rooms_by_course_id else rooms
+        room = random.choice(available_rooms)
 
         if course.id not in course_days:
             course_days[course.id] = set()
 
-        valid_slots = [
-            s
-            for s in timeslots
-            if s.start_period + units - 1 <= 9
-            and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
-            and s.day not in course_days[course.id]
-        ]
-
-        if not valid_slots:
+        # Use pre-computed slots if available
+        if valid_slots_by_units:
+            base_slots = valid_slots_by_units.get(units, [])
+            valid_slots = [s for s in base_slots if s.day not in course_days[course.id]]
+            if not valid_slots:
+                valid_slots = base_slots
+        else:
             valid_slots = [
                 s
                 for s in timeslots
                 if s.start_period + units - 1 <= 9
                 and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
+                and s.day not in course_days[course.id]
             ]
             if not valid_slots:
-                continue
+                valid_slots = [
+                    s
+                    for s in timeslots
+                    if s.start_period + units - 1 <= 9
+                    and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
+                ]
+
+        if not valid_slots:
+            continue
 
         slot = random.choice(valid_slots)
         course_days[course.id].add(slot.day)
@@ -96,7 +107,7 @@ def generate_random_chromosome(sessions, rooms, timeslots):
 
 
 # GREEDY INIT
-def generate_greedy_chromosome(sessions, rooms, timeslots):
+def generate_greedy_chromosome(sessions, rooms, timeslots, valid_slots_by_units=None, valid_rooms_by_course_id=None):
 
     genes = []
     lecturer_occupied = {}
@@ -115,24 +126,30 @@ def generate_greedy_chromosome(sessions, rooms, timeslots):
         if course.id not in course_days:
             course_days[course.id] = set()
 
-        shuffled_rooms = list(rooms)
+        # Use pre-computed rooms if available
+        available_rooms = valid_rooms_by_course_id.get(course.id, rooms) if valid_rooms_by_course_id else rooms
+        shuffled_rooms = list(available_rooms)
         random.shuffle(shuffled_rooms)
-        shuffled_slots = list(timeslots)
+
+        # Use pre-computed slots if available
+        available_slots = valid_slots_by_units.get(units, timeslots) if valid_slots_by_units else timeslots
+        shuffled_slots = list(available_slots)
         random.shuffle(shuffled_slots)
 
         for room in shuffled_rooms:
             for slot in shuffled_slots:
-                if slot.start_period + units - 1 > 9:
-                    continue
-
-                # Kiểm tra giới hạn buổi học (buổi sáng: tiết 1-5, buổi chiều: tiết 6-9)
-                start = slot.start_period
-                end = start + units - 1
-                if start <= 5 and end >= 6:
-                    continue
+                # Pre-filtered by valid_slots_by_units
+                if not valid_slots_by_units:
+                    if slot.start_period + units - 1 > 9:
+                        continue
+                    if slot.start_period <= 5 and slot.start_period + units - 1 >= 6:
+                        continue
 
                 if slot.day in course_days[course.id]:
                     continue
+
+                start = slot.start_period
+                end = start + units - 1
 
                 # Kiểm tra trùng lặp giảng viên
                 lec_key = (lecturer_id, slot.day)
@@ -159,23 +176,28 @@ def generate_greedy_chromosome(sessions, rooms, timeslots):
 
         if best_option is None:
             # Fallback
-            room = random.choice(rooms)
-            valid_slots = [
-                s
-                for s in timeslots
-                if s.start_period + units - 1 <= 9
-                and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
-                and s.day not in course_days[course.id]
-            ]
-            if not valid_slots:
+            room = random.choice(available_rooms)
+            if valid_slots_by_units:
+                base_slots = valid_slots_by_units.get(units, [])
+                valid_slots = [s for s in base_slots if s.day not in course_days[course.id]]
+                if not valid_slots:
+                    valid_slots = base_slots
+            else:
                 valid_slots = [
                     s
                     for s in timeslots
                     if s.start_period + units - 1 <= 9
                     and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
+                    and s.day not in course_days[course.id]
                 ]
-            if not valid_slots:
-                valid_slots = [s for s in timeslots if s.start_period + units - 1 <= 9]
+                if not valid_slots:
+                    valid_slots = [
+                        s
+                        for s in timeslots
+                        if s.start_period + units - 1 <= 9
+                        and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
+                    ]
+            
             slot = random.choice(valid_slots) if valid_slots else timeslots[0]
             start = slot.start_period
             end = start + units - 1
@@ -210,7 +232,7 @@ def generate_greedy_chromosome(sessions, rooms, timeslots):
 
 
 # SEMI GREEDY INIT
-def generate_semi_greedy_chromosome(sessions, rooms, timeslots):
+def generate_semi_greedy_chromosome(sessions, rooms, timeslots, valid_slots_by_units=None, valid_rooms_by_course_id=None):
 
     genes = []
     lecturer_occupied = {}
@@ -228,23 +250,30 @@ def generate_semi_greedy_chromosome(sessions, rooms, timeslots):
         if course.id not in course_days:
             course_days[course.id] = set()
 
-        shuffled_rooms = list(rooms)
+        # Use pre-computed rooms if available
+        available_rooms = valid_rooms_by_course_id.get(course.id, rooms) if valid_rooms_by_course_id else rooms
+        shuffled_rooms = list(available_rooms)
         random.shuffle(shuffled_rooms)
-        shuffled_slots = list(timeslots)
+
+        # Use pre-computed slots if available
+        available_slots = valid_slots_by_units.get(units, timeslots) if valid_slots_by_units else timeslots
+        shuffled_slots = list(available_slots)
         random.shuffle(shuffled_slots)
 
         for room in shuffled_rooms:
             for slot in shuffled_slots:
-                if slot.start_period + units - 1 > 9:
+                # Pre-filtered by valid_slots_by_units
+                if not valid_slots_by_units:
+                    if slot.start_period + units - 1 > 9:
+                        continue
+                    if slot.start_period <= 5 and slot.start_period + units - 1 >= 6:
+                        continue
+
+                if slot.day in course_days[course.id]:
                     continue
 
                 start = slot.start_period
                 end = start + units - 1
-                if start <= 5 and end >= 6:
-                    continue
-
-                if slot.day in course_days[course.id]:
-                    continue
 
                 # Kiểm tra trùng lặp giảng viên
                 lec_key = (lecturer_id, slot.day)
@@ -270,23 +299,28 @@ def generate_semi_greedy_chromosome(sessions, rooms, timeslots):
 
         if not candidates:
             # Fallback
-            room = random.choice(rooms)
-            valid_slots = [
-                s
-                for s in timeslots
-                if s.start_period + units - 1 <= 9
-                and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
-                and s.day not in course_days[course.id]
-            ]
-            if not valid_slots:
+            room = random.choice(available_rooms)
+            if valid_slots_by_units:
+                base_slots = valid_slots_by_units.get(units, [])
+                valid_slots = [s for s in base_slots if s.day not in course_days[course.id]]
+                if not valid_slots:
+                    valid_slots = base_slots
+            else:
                 valid_slots = [
                     s
                     for s in timeslots
                     if s.start_period + units - 1 <= 9
                     and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
+                    and s.day not in course_days[course.id]
                 ]
-            if not valid_slots:
-                valid_slots = [s for s in timeslots if s.start_period + units - 1 <= 9]
+                if not valid_slots:
+                    valid_slots = [
+                        s
+                        for s in timeslots
+                        if s.start_period + units - 1 <= 9
+                        and not (s.start_period <= 5 and s.start_period + units - 1 >= 6)
+                    ]
+
             slot = random.choice(valid_slots) if valid_slots else timeslots[0]
             start = slot.start_period
             end = start + units - 1

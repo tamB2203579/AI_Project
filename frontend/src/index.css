@@ -1,8 +1,3 @@
-/* ============================================
-   LecScheduler — Design System
-   White + Blue theme (#1f5ca9 / #00afef)
-   ============================================ */
-
 /* ---- CSS Custom Properties ---- */
 :root {
   --bg-primary: #f5f7fa;
@@ -333,11 +328,11 @@ body {
 }
 
 .section-title {
-  grid-column: 1 / -1;
   font-size: 18px;
-  font-weight: 600;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #e5e7eb;
+  font-weight: 700;
+  padding-bottom: 12px;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 
@@ -716,25 +711,6 @@ select.input {
   margin-top: 2px;
 }
 
-.btn-edit {
-  padding: 6px 10px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 1.1rem;
-  border-radius: var(--radius-sm);
-  transition: var(--transition);
-}
-
-.item-card:hover .btn-edit {
-  opacity: 0.8;
-}
-
-.btn-edit:hover {
-  background: rgba(244, 63, 94, 0.15);
-  opacity: 1 !important;
-}
-
 .btn-delete {
   padding: 6px 10px;
   border: none;
@@ -743,6 +719,7 @@ select.input {
   font-size: 1.1rem;
   border-radius: var(--radius-sm);
   transition: var(--transition);
+  opacity: 0.4;
 }
 
 .item-card:hover .btn-delete {
@@ -754,24 +731,53 @@ select.input {
   opacity: 1 !important;
 }
 
+.btn-edit {
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.1rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+  opacity: 0.4;
+}
+
+.item-card:hover .btn-edit {
+  opacity: 0.8;
+}
+
+.btn-edit:hover {
+  background: rgba(244, 63, 94, 0.15);
+  opacity: 1 !important;
+}
+
+
 /* ---- GA Controls ---- */
+.ga-params {
+  display: flex;
+  flex-direction: column;
+}
+
+.config-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.config-section:first-child {
+  padding-top: 0;
+}
+
+.config-section:last-of-type {
+  border-bottom: none;
+}
 
 .param-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.param-label {
-  font-size: 14px;
-  font-weight: 500;
-  display: flex;
-  justify-content: space-between;
-}
-
-.param-value {
-  color: #2563eb;
-  font-weight: 600;
+  gap: 6px;
 }
 
 .param-label {
@@ -781,13 +787,63 @@ select.input {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: 8px;
 }
 
 .param-value {
-  color: var(--accent-hover);
+  color: var(--accent);
   font-weight: 700;
   font-size: 0.9rem;
+  background: var(--bg-glass);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.status-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-top: 24px;
+  animation: slideInUp 0.3s ease;
+}
+
+.status-card.completed {
+  background: rgba(16, 185, 129, 0.04);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+
+.status-icon {
+  font-size: 1.4rem;
+}
+
+.status-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.status-details {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Range slider */
@@ -898,28 +954,142 @@ select.input {
   min-height: 100vh;
   padding: 40px 60px;
   background: #f5f7fb;
-
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 40px;
 }
 
 .ga-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) 1fr;
+  gap: 28px;
+  align-items: start;
   width: 100%;
+}
+
+/* GA Visualizer panel */
+.ga-viz-panel {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ga-viz-wrapper {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05), 0 10px 30px rgba(0, 0, 0, 0.07);
+}
+
+.ga-viz-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ga-viz-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ga-viz-phase {
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--border);
+  color: var(--text-secondary);
+}
+
+.ga-viz-phase.running {
+  background: rgba(0, 175, 239, 0.12);
+  color: #0099cc;
+}
+
+.ga-viz-phase.completed {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.ga-viz-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.leg-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.viz-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.viz-stat {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.viz-stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.viz-empty {
+  background: rgba(31, 92, 169, 0.03);
+  border: 1px dashed var(--border-hover);
+  border-radius: var(--radius-lg);
+  padding: 36px 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.viz-empty-icon {
+  font-size: 2.4rem;
+  margin-bottom: 10px;
+}
+
+.viz-empty p {
+  font-size: 0.88rem;
+  line-height: 1.6;
 }
 
 .ga-params {
   background: white;
   padding: 32px;
   border-radius: 14px;
-
-  box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.05),
-    0 10px 30px rgba(0, 0, 0, 0.08);
-
-  display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
-  gap: 28px 36px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05), 0 10px 30px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .ga-chart-section {

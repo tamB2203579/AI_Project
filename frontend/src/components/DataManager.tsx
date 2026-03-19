@@ -91,12 +91,12 @@ function LecturersTab() {
 
     try {
       if (editingId !== null) {
-        const res = await lecturerApi.update(editingId, payload);
-        dispatch({ type: "UPDATE_LECTURER", payload: res.data });
+        await lecturerApi.update(editingId, payload);
       } else {
-        const res = await lecturerApi.create(payload);
-        dispatch({ type: "ADD_LECTURER", payload: res.data });
+        await lecturerApi.create(payload);
       }
+      const allRes = await lecturerApi.getAll();
+      dispatch({ type: "SET_LECTURERS", payload: allRes.data });
       resetForm();
     } catch (err) {
       console.error("Save lecturer error", err);
@@ -104,8 +104,13 @@ function LecturersTab() {
   };
 
   const handleDelete = async (id: number) => {
-    await lecturerApi.delete(id);
-    dispatch({ type: "REMOVE_LECTURER", payload: id });
+    try {
+      await lecturerApi.delete(id);
+      const allRes = await lecturerApi.getAll();
+      dispatch({ type: "SET_LECTURERS", payload: allRes.data });
+    } catch (err) {
+      console.error("Delete lecturer error", err);
+    }
   };
 
   const toggleDay = (dayNum: number) => {
@@ -253,12 +258,12 @@ function CoursesTab() {
 
     try {
       if (editingId !== null) {
-        const res = await courseApi.update(editingId, payload);
-        dispatch({ type: "UPDATE_COURSE", payload: res.data });
+        await courseApi.update(editingId, payload);
       } else {
-        const res = await courseApi.create(payload);
-        dispatch({ type: "ADD_COURSE", payload: res.data });
+        await courseApi.create(payload);
       }
+      const allRes = await courseApi.getAll();
+      dispatch({ type: "SET_COURSES", payload: allRes.data });
       resetForm();
     } catch (err) {
       console.error("Save course error", err);
@@ -266,8 +271,13 @@ function CoursesTab() {
   };
 
   const handleDelete = async (id: number) => {
-    await courseApi.delete(id);
-    dispatch({ type: "REMOVE_COURSE", payload: id });
+    try {
+      await courseApi.delete(id);
+      const allRes = await courseApi.getAll();
+      dispatch({ type: "SET_COURSES", payload: allRes.data });
+    } catch (err) {
+      console.error("Delete course error", err);
+    }
   };
 
   const toggleRoomType = (t: string) => {
@@ -450,12 +460,12 @@ function RoomsTab() {
 
     try {
       if (editingId !== null) {
-        const res = await roomApi.update(editingId, payload);
-        dispatch({ type: "UPDATE_ROOM", payload: res.data });
+        await roomApi.update(editingId, payload);
       } else {
-        const res = await roomApi.create(payload);
-        dispatch({ type: "ADD_ROOM", payload: res.data });
+        await roomApi.create(payload);
       }
+      const allRes = await roomApi.getAll();
+      dispatch({ type: "SET_ROOMS", payload: allRes.data });
       resetForm();
     } catch (err) {
       console.error("Save room error", err);
@@ -463,8 +473,13 @@ function RoomsTab() {
   };
 
   const handleDelete = async (id: number) => {
-    await roomApi.delete(id);
-    dispatch({ type: "REMOVE_ROOM", payload: id });
+    try {
+      await roomApi.delete(id);
+      const allRes = await roomApi.getAll();
+      dispatch({ type: "SET_ROOMS", payload: allRes.data });
+    } catch (err) {
+      console.error("Delete room error", err);
+    }
   };
 
   const typeIcons: Record<string, string> = { Lecture: "🏛️", Lab: "🔬" };

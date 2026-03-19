@@ -60,11 +60,6 @@ class GAConfig(BaseModel):
     max_time_seconds: int = Field(
         default=30, ge=1, le=300, description="Thời gian tối đa (giây)"
     )
-    max_stall_generations: int = Field(
-        default=50,
-        ge=1,
-        description="Số thế hệ không cải thiện trước khi tăng đột biến",
-    )
     target_fitness: Optional[float] = Field(
         default=None, description="Ngưỡng fitness mục tiêu"
     )

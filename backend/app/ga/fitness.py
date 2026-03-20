@@ -29,7 +29,7 @@ def calculate_fitness_fast(
 
     for gene in chromosome.genes:
         course = courses_dict[gene.course_id]
-        lecturer = lecturers_dict[gene.lecturer_id]
+        lecturer = lecturers_dict[course.lecturer_id]
         room = rooms_dict[gene.room_id]
         timeslot = timeslots_dict[gene.timeslot_id]
 
@@ -67,7 +67,7 @@ def calculate_fitness_fast(
         # HARD: Overlap using Bitmasks (Lecturer & Room)
         period_mask = ((1 << gene.units) - 1) << (start_period - 1)
         
-        lec_key = (gene.lecturer_id, day)
+        lec_key = (course.lecturer_id, day)
         if lec_key not in lecturer_masks:
             lecturer_masks[lec_key] = 0
             lecturer_schedule_blocks[lec_key] = []
@@ -146,7 +146,7 @@ def evaluate_details(
 
     for gene in chromosome.genes:
         course = courses_dict[gene.course_id]
-        lecturer = lecturers_dict[gene.lecturer_id]
+        lecturer = lecturers_dict[course.lecturer_id]
         room = rooms_dict[gene.room_id]
         timeslot = timeslots_dict[gene.timeslot_id]
 

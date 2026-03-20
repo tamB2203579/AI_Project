@@ -55,8 +55,6 @@ def generate_random_chromosome(sessions, rooms, timeslots, valid_slots_by_units=
         units = session["units"]
         session_id = session["session_id"]
 
-        lecturer_id = course.lecturerId
-
         # Use pre-computed rooms if available
         available_rooms = valid_rooms_by_course_id.get(course.id, rooms) if valid_rooms_by_course_id else rooms
         room = random.choice(available_rooms)
@@ -93,7 +91,6 @@ def generate_random_chromosome(sessions, rooms, timeslots, valid_slots_by_units=
         course_days[course.id].add(slot.day)
 
         gene = Gene(
-            lecturer_id=lecturer_id,
             room_id=room.id,
             course_id=course.id,
             timeslot_id=slot.id,
@@ -118,7 +115,7 @@ def generate_greedy_chromosome(sessions, rooms, timeslots, valid_slots_by_units=
         course = session["course"]
         units = session["units"]
         session_id = session["session_id"]
-        lecturer_id = course.lecturerId
+        lecturer_id = course.lecturer_id
 
         best_score = -1
         best_option = None
@@ -218,7 +215,6 @@ def generate_greedy_chromosome(sessions, rooms, timeslots, valid_slots_by_units=
         room_occupied[room_key] |= occupied_periods
 
         gene = Gene(
-            lecturer_id=lecturer_id,
             room_id=room.id,
             course_id=course.id,
             timeslot_id=slot.id,
@@ -243,7 +239,7 @@ def generate_semi_greedy_chromosome(sessions, rooms, timeslots, valid_slots_by_u
         course = session["course"]
         units = session["units"]
         session_id = session["session_id"]
-        lecturer_id = course.lecturerId
+        lecturer_id = course.lecturer_id
 
         candidates = []
 
@@ -345,7 +341,6 @@ def generate_semi_greedy_chromosome(sessions, rooms, timeslots, valid_slots_by_u
         room_occupied[room_key] |= occupied_periods
 
         gene = Gene(
-            lecturer_id=lecturer_id,
             room_id=room.id,
             course_id=course.id,
             timeslot_id=slot.id,

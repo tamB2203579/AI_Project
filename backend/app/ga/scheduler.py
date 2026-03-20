@@ -111,7 +111,7 @@ class GAScheduler:
         self._sampled_generations = set()
 
     def _load_data(self):
-        courses = [Course(**c) for c in get_collection("courses")]
+        courses = [Course.from_dict(c) for c in get_collection("courses")]
         lecturers = [Lecturer(**l) for l in get_collection("lecturers")]
         rooms = [Room(**r) for r in get_collection("rooms")]
         timeslots = [TimeSlot(**t) for t in get_collection("timeslots")]

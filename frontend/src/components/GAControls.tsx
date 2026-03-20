@@ -307,7 +307,7 @@ export function GAControls() {
               onChange={max_time_seconds => updateGA({ max_time_seconds })}
             />
             <RangeField
-              label="Elitism Numbers"
+              label="Elitism Rate"
               min={0}
               max={0.1}
               step={0.01}

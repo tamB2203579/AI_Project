@@ -124,7 +124,7 @@ def heuristic_mutation(
 
         period_mask = ((1 << gene.units) - 1) << (start - 1)
 
-        lec_key = (gene.lecturer_id, day)
+        lec_key = (course.lecturer_id, day)
         if lec_key not in lecturer_masks:
             lecturer_masks[lec_key] = 0
         if lecturer_masks[lec_key] & period_mask:

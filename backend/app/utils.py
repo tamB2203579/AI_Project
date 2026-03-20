@@ -61,7 +61,7 @@ def format_genes(chromosome, courses_dict, lecturers_dict, rooms_dict):
     formatted = []
     for g in chromosome.genes:
         course = courses_dict.get(g.course_id)
-        lecturer = lecturers_dict.get(g.lecturer_id)
+        lecturer = lecturers_dict.get(course.lecturer_id)
         room = rooms_dict.get(g.room_id)
 
         formatted.append(
@@ -72,7 +72,7 @@ def format_genes(chromosome, courses_dict, lecturers_dict, rooms_dict):
                 if course
                 else "Unknown",
                 "units": g.units,
-                "lecturerId": g.lecturer_id,
+                "lecturerId": course.lecturer_id,
                 "lecturerName": lecturer.name if lecturer else "Unknown",
                 "roomId": g.room_id,
                 "roomName": room.name if room else "Unknown",

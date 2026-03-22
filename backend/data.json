@@ -398,6 +398,16 @@
         2,
         5
       ]
+    },
+    {
+      "id": 11,
+      "name": "PhD. Trương Quốc Định",
+      "maxUnitPerWeek": 15,
+      "preferenceDay": [
+        2,
+        3,
+        4
+      ]
     }
   ],
   "courses": [
@@ -418,7 +428,7 @@
       "courseCode": "CT101",
       "name": "Toán cho khoa học máy tính",
       "unitsPerWeek": 12,
-      "studentsCount": 100,
+      "studentsCount": 115,
       "roomType": [
         "Lecture"
       ],
@@ -430,7 +440,7 @@
       "courseCode": "CT053",
       "name": "Xác suất thống kê",
       "unitsPerWeek": 9,
-      "studentsCount": 95,
+      "studentsCount": 118,
       "roomType": [
         "Lecture"
       ],
@@ -620,6 +630,42 @@
       ],
       "lecturerId": 4,
       "maxUnitsPerDay": 5
+    },
+    {
+      "id": 19,
+      "courseCode": "CT403",
+      "name": "Thực hành AI",
+      "unitsPerWeek": 9,
+      "studentsCount": 35,
+      "roomType": [
+        "Lab"
+      ],
+      "lecturerId": 1,
+      "maxUnitsPerDay": 3
+    },
+    {
+      "id": 20,
+      "courseCode": "CT404",
+      "name": "IoT cơ bản",
+      "unitsPerWeek": 9,
+      "studentsCount": 38,
+      "roomType": [
+        "Lab"
+      ],
+      "lecturerId": 4,
+      "maxUnitsPerDay": 3
+    },
+    {
+      "id": 21,
+      "courseCode": "CT405",
+      "name": "Blockchain",
+      "unitsPerWeek": 12,
+      "studentsCount": 30,
+      "roomType": [
+        "Lab"
+      ],
+      "lecturerId": 6,
+      "maxUnitsPerDay": 4
     }
   ]
 }

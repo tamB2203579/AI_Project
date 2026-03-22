@@ -383,7 +383,6 @@ export function GAControls() {
               options={[
                 { value: "alpha_beta", label: "Alpha Beta" },
                 { value: "penalty", label: "Penalty" },
-                { value: "traditional", label: "Traditional" },
                 { value: "weighted", label: "Weighted" },
                 { value: "lexicographic", label: "Lexicographic" },
               ]}
